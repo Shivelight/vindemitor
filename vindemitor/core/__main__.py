@@ -32,7 +32,7 @@ LOGGING_PATH = None
     help="Log path (or filename). Path can contain the following f-string args: {name} {time}.",
 )
 def main(version: bool, debug: bool, log_path: Path) -> None:
-    """Devine—Modular Movie, TV, and Music Archival Software."""
+    """vindemitor—Modular Movie, TV, and Music Archival Software."""
     logging.basicConfig(
         level=logging.DEBUG if debug else logging.INFO,
         format="%(message)s",
@@ -62,16 +62,22 @@ def main(version: bool, debug: bool, log_path: Path) -> None:
         Padding(
             Group(
                 Text(
-                    r"   / __ \/ ____/ |  / /  _/ | / / ____/" + "\n"
-                    r"  / / / / __/  | | / // //  |/ / __/   " + "\n"
-                    r" / /_/ / /___  | |/ // // /|  / /___   " + "\n"
-                    r"/_____/_____/  |___/___/_/ |_/_____/   ⠀",
+                    r" .          ⠀⠀⠀✦             ˚       ♍︎" + "\n"
+                    r"   . ✦     ˚     .  ⋆.     ★    . ˚.   " + "\n"
+                    r" ✦   .  .   ✦ ˚        .˚     ✦        " + "\n"
+                    r"...- .. -. -.. . -- .. .- - .-. .. -..-",
                     style="ascii.art",
                 ),
-                f"v[repr.number]{__version__}[/] Copyright © 2019-{datetime.now().year} rlaphoenix",
-                "  [bright_blue]https://github.com/devine-dl/devine[/]",
             ),
             (1, 21, 1, 20),
+            expand=True,
+        ),
+        Padding(
+            Group(
+                f"v[repr.number]{__version__}[/] Copyright © 2019-{datetime.now().year} rlaphoenix, Shivelight",
+                "[bright_blue]https://github.com/Shivelight/vindemitor[/]",
+            ),
+            (0, 15, 1, 14),
             expand=True,
         ),
         justify="left",

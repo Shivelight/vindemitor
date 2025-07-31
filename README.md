@@ -54,7 +54,7 @@ $ pip install devine
 > If pip gives you a warning about a path not being in your PATH environment variable then promptly add that path then
 > close all open command prompt/terminal windows, or `devine` won't work as it will not be found.
 
-Voilà 🎉 — You now have the `devine` package installed!  
+Voilà 🎉 — You now have the `devine` package installed!
 A command-line interface is now available, try `devine --help`.
 
 ### Dependencies
@@ -106,7 +106,7 @@ And here's some more advanced things you could take a look at,
 - [ ] Hosting and/or Using Remote Key Vaults.
 - [ ] Serving and/or Using Remote CDM Provisions.
 
-Documentation on the config is available in the [CONFIG.md](CONFIG.md) file, it has a lot of handy settings.  
+Documentation on the config is available in the [CONFIG.md](CONFIG.md) file, it has a lot of handy settings.
 If you start to get sick of putting something in your CLI call, then I recommend taking a look at it!
 
 ## Services
@@ -210,7 +210,7 @@ If you are collaborating with a team on multiple services then forking the proje
 6. `git pull upstream master`
 7. (optionally) Hard reset to the latest stable version by tag. E.g., `git reset --hard v1.0.0`.
 
-Now commit your Services or other changes to your forked repository.  
+Now commit your Services or other changes to your forked repository.
 Once committed all your other team members can easily pull changes as well as push new changes.
 
 When a new update comes out you can easily rebase your fork to that commit to update.
@@ -282,7 +282,7 @@ folder without a `.txt` or `default.txt`, but with another file, then no Cookies
 
 ### Cookie file format and Extensions
 
-Cookies must be in the standard Netscape cookies file format.  
+Cookies must be in the standard Netscape cookies file format.
 Recommended Cookie exporter extensions:
 
 - Firefox: "[Export Cookies]" by `Rotem Dan`
@@ -348,9 +348,10 @@ Please refrain from spam or asking for questions that infringe upon a Service's 
 
 ## Licensing
 
-This software is licensed under the terms of [GNU General Public License, Version 3.0](LICENSE).  
+This software is licensed under the terms of [GNU General Public License, Version 3.0](LICENSE).
 You can find a copy of the license in the LICENSE file in the root folder.
 
 * * *
 
+© Shivelight 2025 \
 © rlaphoenix 2019-2024

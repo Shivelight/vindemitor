@@ -44,8 +44,7 @@ class SeasonRange(click.ParamType):
             if exclude:
                 token = token[1:]
             parsed = [
-                re.match(r"^S(?P<season>\d+)(E(?P<episode>\d+))?$", x, re.IGNORECASE)
-                for x in re.split(r"[:-]", token)
+                re.match(r"^S(?P<season>\d+)(E(?P<episode>\d+))?$", x, re.IGNORECASE) for x in re.split(r"[:-]", token)
             ]
             if len(parsed) > 2:
                 self.fail(f"Invalid token, only a left and right range is acceptable: {token}")
@@ -55,11 +54,13 @@ class SeasonRange(click.ParamType):
                 self.fail(f"Invalid token, syntax error occurred: {token}")
             from_season, from_episode = [
                 int(v) if v is not None else self.MIN_EPISODE
-                for k, v in parsed[0].groupdict().items() if parsed[0]  # type: ignore[union-attr]
+                for k, v in parsed[0].groupdict().items()
+                if parsed[0]  # type: ignore[union-attr]
             ]
             to_season, to_episode = [
                 int(v) if v is not None else self.MAX_EPISODE
-                for k, v in parsed[1].groupdict().items() if parsed[1]  # type: ignore[union-attr]
+                for k, v in parsed[1].groupdict().items()
+                if parsed[1]  # type: ignore[union-attr]
             ]
             if from_season > to_season:
                 self.fail(f"Invalid range, left side season cannot be bigger than right side season: {token}")
@@ -67,8 +68,7 @@ class SeasonRange(click.ParamType):
                 self.fail(f"Invalid range, left side episode cannot be bigger than right side episode: {token}")
             for s in range(from_season, to_season + 1):
                 for e in range(
-                    from_episode if s == from_season else 0,
-                    (self.MAX_EPISODE if s < to_season else to_episode) + 1
+                    from_episode if s == from_season else 0, (self.MAX_EPISODE if s < to_season else to_episode) + 1
                 ):
                     (computed if not exclude else exclusions).append(f"{s}x{e}")
         for exclusion in exclusions:
@@ -99,10 +99,7 @@ class QualityList(click.ParamType):
     name = "quality_list"
 
     def convert(
-        self,
-        value: Union[str, list[str]],
-        param: Optional[click.Parameter] = None,
-        ctx: Optional[click.Context] = None
+        self, value: Union[str, list[str]], param: Optional[click.Parameter] = None, ctx: Optional[click.Context] = None
     ) -> list[int]:
         if not value:
             return []
@@ -116,7 +113,7 @@ class QualityList(click.ParamType):
                 self.fail(
                     f"Expected string for int() conversion, got {resolution!r} of type {type(resolution).__name__}",
                     param,
-                    ctx
+                    ctx,
                 )
             except ValueError:
                 self.fail(f"{resolution!r} is not a valid integer", param, ctx)
@@ -137,10 +134,7 @@ class MultipleChoice(click.Choice):
         return f"MultipleChoice({list(self.choices)})"
 
     def convert(
-        self,
-        value: Any,
-        param: Optional[click.Parameter] = None,
-        ctx: Optional[click.Context] = None
+        self, value: Any, param: Optional[click.Parameter] = None, ctx: Optional[click.Context] = None
     ) -> list[Any]:
         if not value:
             return []
@@ -149,11 +143,7 @@ class MultipleChoice(click.Choice):
         elif isinstance(value, list):
             values = value
         else:
-            self.fail(
-                f"{value!r} is not a supported value.",
-                param,
-                ctx
-            )
+            self.fail(f"{value!r} is not a supported value.", param, ctx)
 
         chosen_values: list[Any] = []
         for value in values:
@@ -161,12 +151,7 @@ class MultipleChoice(click.Choice):
 
         return chosen_values
 
-    def shell_complete(
-        self,
-        ctx: click.Context,
-        param: click.Parameter,
-        incomplete: str
-    ) -> list[CompletionItem]:
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
         """
         Complete choices that start with the incomplete value.
 
