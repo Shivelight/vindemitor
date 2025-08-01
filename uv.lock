@@ -1246,7 +1246,7 @@ wheels = [
 
 [[package]]
 name = "vindemitor"
-version = "3.3.3"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },

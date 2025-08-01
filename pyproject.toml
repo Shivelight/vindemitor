@@ -1,6 +1,6 @@
 [project]
 name = "vindemitor"
-version = "3.3.3"
+version = "0.1.0"
 description = "Modular Movie, TV, and Music Archival Software."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -111,4 +111,3 @@ select = ["E4", "E7", "E9", "F", "W"]
 
 [tool.uv]
 override-dependencies = ["marisa-trie==1.2.1", "cffi==1.17.1"]
-
