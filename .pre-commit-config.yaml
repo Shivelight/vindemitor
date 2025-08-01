@@ -7,10 +7,12 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-  - repo: https://github.com/mtkennerly/pre-commit-hooks
-    rev: v0.4.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.12.7
     hooks:
-      - id: poetry-ruff-check
+      # Run the linter.
+      - id: ruff-check
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
