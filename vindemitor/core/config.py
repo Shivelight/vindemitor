@@ -84,7 +84,7 @@ POSSIBLE_CONFIG_PATHS = (
     # The Parent Folder to the Devine Namespace Folder (e.g., %appdata%/Python/Python311/site-packages)
     Config._Directories.namespace_dir.parent / Config._Filenames.root_config,
     # The AppDirs User Config Folder (e.g., %localappdata%/devine)
-    Config._Directories.user_configs / Config._Filenames.root_config
+    Config._Directories.user_configs / Config._Filenames.root_config,
 )
 
 

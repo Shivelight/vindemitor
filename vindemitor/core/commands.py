@@ -12,18 +12,18 @@ _COMMANDS = sorted(
 _MODULES = {path.stem: getattr(import_module_by_path(path), path.stem) for path in _COMMANDS}
 
 
-class Commands(click.MultiCommand):
+class Commands(click.Group):
     """Lazy-loaded command group of project commands."""
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         """Returns a list of command names from the command filenames."""
         return [x.stem for x in _COMMANDS]
 
-    def get_command(self, ctx: click.Context, name: str) -> Optional[click.Command]:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> Optional[click.Command]:
         """Load the command code and return the main click command function."""
-        module = _MODULES.get(name)
+        module = _MODULES.get(cmd_name)
         if not module:
-            raise click.ClickException(f"Unable to find command by the name '{name}'")
+            raise click.ClickException(f"Unable to find command by the name '{cmd_name}'")
 
         if hasattr(module, "cli"):
             return module.cli

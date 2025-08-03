@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Optional, Union
 
+from vindemitor.core.config import config
+
 
 class Credential:
     """Username (or Email) and Password Credential."""
@@ -24,8 +26,7 @@ class Credential:
 
     def __repr__(self) -> str:
         return "{name}({items})".format(
-            name=self.__class__.__name__,
-            items=", ".join([f"{k}={repr(v)}" for k, v in self.__dict__.items()])
+            name=self.__class__.__name__, items=", ".join([f"{k}={repr(v)}" for k, v in self.__dict__.items()])
         )
 
     def dumps(self) -> str:
@@ -72,9 +73,7 @@ class Credential:
             `\tJohnd\noe@gm\n\rail.com\n:Pass1\n23\n\r  \t  \t`
             >>>Credential(username='Johndoe@gmail.com', password='Pass123')
         """
-        text = "".join([
-            x.strip() for x in text.splitlines(keepends=False)
-        ]).strip()
+        text = "".join([x.strip() for x in text.splitlines(keepends=False)]).strip()
         credential = re.fullmatch(r"^([^:]+?):([^:]+?)(?::(.+))?$", text)
         if credential:
             return cls(*credential.groups())
@@ -88,3 +87,18 @@ class Credential:
         format expected to be found in the URIs contents.
         """
         return cls.loads(path.read_text("utf8"))
+
+
+def get_credentials(service: str, profile: Optional[str]) -> Optional[Credential]:
+    """Get Service Credentials for Profile."""
+    credentials = config.credentials.get(service)
+    if credentials:
+        if isinstance(credentials, dict):
+            if profile:
+                credentials = credentials.get(profile) or credentials.get("default")
+            else:
+                credentials = credentials.get("default")
+        if credentials:
+            if isinstance(credentials, list):
+                return Credential(*credentials)
+            return Credential.loads(credentials)  # type: ignore

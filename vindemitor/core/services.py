@@ -13,7 +13,7 @@ _MODULES = {path.parent.stem: getattr(import_module_by_path(path), path.parent.s
 _ALIASES = {tag: getattr(module, "ALIASES") for tag, module in _MODULES.items()}
 
 
-class Services(click.MultiCommand):
+class Services(click.Group):
     """Lazy-loaded command group of project services."""
 
     # Click-specific methods
@@ -22,16 +22,16 @@ class Services(click.MultiCommand):
         """Returns a list of all available Services as command names for Click."""
         return Services.get_tags()
 
-    def get_command(self, ctx: click.Context, name: str) -> click.Command:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command:
         """Load the Service and return the Click CLI method."""
-        tag = Services.get_tag(name)
+        tag = Services.get_tag(cmd_name)
         try:
             service = Services.load(tag)
         except KeyError as e:
             available_services = self.list_commands(ctx)
             if not available_services:
                 raise click.ClickException(
-                    f"There are no Services added yet, therefore the '{name}' Service could not be found."
+                    f"There are no Services added yet, therefore the '{cmd_name}' Service could not be found."
                 )
             raise click.ClickException(f"{e}. Available Services: {', '.join(available_services)}")
 

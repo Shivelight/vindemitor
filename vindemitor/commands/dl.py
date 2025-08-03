@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import html
 import logging
-import math
 import random
 import re
 import shutil
@@ -13,21 +11,13 @@ from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from functools import partial
-from http.cookiejar import CookieJar, MozillaCookieJar
-from itertools import product
 from pathlib import Path
 from threading import Lock
 from typing import Any, Callable, Optional
-from uuid import UUID
 
 import click
-import jsonpickle
 import yaml
-from construct import ConstError
 from pymediainfo import MediaInfo
-from pywidevine.cdm import Cdm as WidevineCdm
-from pywidevine.device import Device
-from pywidevine.remotecdm import RemoteCdm
 from rich.console import Group
 from rich.live import Live
 from rich.padding import Padding
@@ -41,15 +31,19 @@ from rich.tree import Tree
 from vindemitor.core import binaries
 from vindemitor.core.config import config
 from vindemitor.core.console import console
-from vindemitor.core.constants import DOWNLOAD_LICENCE_ONLY, AnyTrack, context_settings
-from vindemitor.core.credential import Credential
-from vindemitor.core.drm import DRM_T, Widevine
+from vindemitor.core.constants import DOWNLOAD_LICENCE_ONLY, context_settings
+from vindemitor.core.cookies import get_cookie_jar, get_cookie_path, save_cookies
+from vindemitor.core.credential import get_credentials
+from vindemitor.core.drm_manager import DRMManager, get_cdm
 from vindemitor.core.events import events
+from vindemitor.core.post_processor import PostProcessor
 from vindemitor.core.proxies import Basic, Hola, NordVPN
+from vindemitor.core.proxies.proxy import Proxy
 from vindemitor.core.service import Service
 from vindemitor.core.services import Services
-from vindemitor.core.titles import Movie, Song, Title_T
+from vindemitor.core.titles import Movie, Song
 from vindemitor.core.titles.episode import Episode
+from vindemitor.core.track_selector import TrackSelector
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
 from vindemitor.core.tracks.attachment import Attachment
 from vindemitor.core.utilities import get_system_fonts, is_close_match, time_elapsed_since
@@ -196,6 +190,7 @@ class dl:
     )
     @click.option("--downloads", type=int, default=1, help="Amount of tracks to download concurrently.")
     @click.pass_context
+    @staticmethod
     def cli(ctx: click.Context, **kwargs: Any) -> dl:
         return dl(ctx, **kwargs)
 
@@ -233,7 +228,7 @@ class dl:
 
         with console.status("Loading Widevine CDM...", spinner="dots"):
             try:
-                self.cdm = self.get_cdm(self.service, self.profile)
+                self.cdm = get_cdm(self.service, self.profile)
             except ValueError as e:
                 self.log.error(f"Failed to load Widevine CDM, {e}")
                 sys.exit(1)
@@ -250,7 +245,7 @@ class dl:
                 self.vaults.load(vault_type, **vault)
             self.log.info(f"Loaded {len(self.vaults)} Vaults")
 
-        self.proxy_providers = []
+        self.proxy_providers: list[Proxy] = []
         if no_proxy:
             ctx.params["proxy"] = None
         else:
@@ -342,14 +337,32 @@ class dl:
     ) -> None:
         start_time = time.time()
 
+        self.drm_manager = DRMManager(self.cdm, self.vaults)
+        self.track_selector = TrackSelector(
+            quality=quality,
+            vcodec=vcodec,
+            acodec=acodec,
+            vbitrate=vbitrate,
+            abitrate=abitrate,
+            range_=range_,
+            channels=channels,
+            lang=lang,
+            v_lang=v_lang,
+            s_lang=s_lang,
+            video_only=video_only,
+            audio_only=audio_only,
+            subs_only=subs_only,
+            chapters_only=chapters_only,
+        )
+
         if cdm_only is None:
             vaults_only = None
         else:
             vaults_only = not cdm_only
 
         with console.status("Authenticating with Service...", spinner="dots"):
-            cookies = self.get_cookie_jar(self.service, self.profile)
-            credential = self.get_credentials(self.service, self.profile)
+            cookies = get_cookie_jar(self.service, self.profile)
+            credential = get_credentials(self.service, self.profile)
             service.authenticate(cookies, credential)
             if cookies or credential:
                 self.log.info("Authenticated with Service")
@@ -417,127 +430,48 @@ class dl:
                 continue
 
             with console.status("Selecting tracks...", spinner="dots"):
-                if isinstance(title, (Movie, Episode)):
-                    # filter video tracks
-                    if vcodec:
-                        title.tracks.select_video(lambda x: x.codec == vcodec)
-                        if not title.tracks.videos:
-                            self.log.error(f"There's no {vcodec.name} Video Track...")
-                            sys.exit(1)
-
-                    if range_:
-                        title.tracks.select_video(lambda x: x.range in range_)
-                        for color_range in range_:
-                            if not any(x.range == color_range for x in title.tracks.videos):
-                                self.log.error(f"There's no {color_range.name} Video Tracks...")
-                                sys.exit(1)
-
-                    if vbitrate:
-                        title.tracks.select_video(lambda x: x.bitrate and x.bitrate // 1000 == vbitrate)
-                        if not title.tracks.videos:
-                            self.log.error(f"There's no {vbitrate}kbps Video Track...")
-                            sys.exit(1)
-
-                    video_languages = v_lang or lang
-                    if video_languages and "all" not in video_languages:
-                        title.tracks.videos = title.tracks.by_language(title.tracks.videos, video_languages)
-                        if not title.tracks.videos:
-                            self.log.error(f"There's no {video_languages} Video Track...")
-                            sys.exit(1)
-
-                    if quality:
-                        title.tracks.by_resolutions(quality)
-                        missing_resolutions = []
-                        for resolution in quality:
-                            if any(video.height == resolution for video in title.tracks.videos):
-                                continue
-                            if any(int(video.width * (9 / 16)) == resolution for video in title.tracks.videos):
-                                continue
-                            missing_resolutions.append(resolution)
-                        if missing_resolutions:
-                            res_list = ""
-                            if len(missing_resolutions) > 1:
-                                res_list = (", ".join([f"{x}p" for x in missing_resolutions[:-1]])) + " or "
-                            res_list = f"{res_list}{missing_resolutions[-1]}p"
-                            plural = "s" if len(missing_resolutions) > 1 else ""
-                            self.log.error(f"There's no {res_list} Video Track{plural}...")
-                            sys.exit(1)
-
-                    # choose best track by range and quality
-                    title.tracks.videos = [
-                        track
-                        for resolution, color_range in product(quality or [None], range_ or [None])
-                        for track in [
-                            next(
-                                t
-                                for t in title.tracks.videos
-                                if (not resolution and not color_range)
-                                or (
-                                    (
-                                        not resolution
-                                        or ((t.height == resolution) or (int(t.width * (9 / 16)) == resolution))
-                                    )
-                                    and (not color_range or t.range == color_range)
-                                )
-                            )
-                        ]
-                    ]
-
-                    # filter subtitle tracks
-                    if s_lang and "all" not in s_lang:
-                        title.tracks.select_subtitles(lambda x: is_close_match(x.language, s_lang))
-                        if not title.tracks.subtitles:
-                            self.log.error(f"There's no {s_lang} Subtitle Track...")
-                            sys.exit(1)
-
-                    title.tracks.select_subtitles(lambda x: not x.forced or is_close_match(x.language, lang))
-
-                # filter audio tracks
-                # might have no audio tracks if part of the video, e.g. transport stream hls
-                if len(title.tracks.audio) > 0:
-                    title.tracks.select_audio(lambda x: not x.descriptive)  # exclude descriptive audio
-                    if acodec:
-                        title.tracks.select_audio(lambda x: x.codec == acodec)
-                        if not title.tracks.audio:
-                            self.log.error(f"There's no {acodec.name} Audio Tracks...")
-                            sys.exit(1)
-                    if abitrate:
-                        title.tracks.select_audio(lambda x: x.bitrate and x.bitrate // 1000 == abitrate)
-                        if not title.tracks.audio:
-                            self.log.error(f"There's no {abitrate}kbps Audio Track...")
-                            sys.exit(1)
-                    if channels:
-                        title.tracks.select_audio(lambda x: math.ceil(x.channels) == math.ceil(channels))
-                        if not title.tracks.audio:
-                            self.log.error(f"There's no {channels} Audio Track...")
-                            sys.exit(1)
-                    if lang and "all" not in lang:
-                        title.tracks.audio = title.tracks.by_language(title.tracks.audio, lang, per_language=1)
-                        if not title.tracks.audio:
-                            self.log.error(f"There's no {lang} Audio Track, cannot continue...")
-                            sys.exit(1)
-
-                if video_only or audio_only or subs_only or chapters_only:
-                    kept_tracks = []
-                    if video_only:
-                        kept_tracks.extend(title.tracks.videos)
-                    if audio_only:
-                        kept_tracks.extend(title.tracks.audio)
-                    if subs_only:
-                        kept_tracks.extend(title.tracks.subtitles)
-                    if chapters_only:
-                        kept_tracks.extend(title.tracks.chapters)
-                    title.tracks = Tracks(kept_tracks)
+                title.tracks = self.track_selector.select(title)
 
             selected_tracks, tracks_progress_callables = title.tracks.tree(add_progress=True)
 
             download_table = Table.grid()
             download_table.add_row(selected_tracks)
-
+            drm_trees: dict[str, Tree] = {}
             dl_start_time = time.time()
 
             if skip_dl:
                 DOWNLOAD_LICENCE_ONLY.set()
+
+            def get_drm_callbacks() -> tuple[Callable, Callable, Callable]:
+                """
+                Creates and returns a set of callbacks for DRM status updates.
+                These callbacks will update the UI table with DRM information.
+                """
+                tree_key = ""
+
+                def on_pssh_init(drm: str, pssh: str):
+                    if pssh not in drm_trees:
+                        cek_tree = Tree(Text.assemble((drm, "cyan"), (f"({pssh})", "text"), overflow="fold"))
+                        drm_trees[pssh] = cek_tree
+                        download_table.add_row()
+                        download_table.add_row(cek_tree)
+                        nonlocal tree_key
+                        tree_key = pssh
+
+                def on_key_found(kid: str, key: str, source: str, is_track_kid: bool):
+                    tree = drm_trees.get(tree_key)
+                    if tree:
+                        track_kid_marker = "*" if is_track_kid else ""
+                        label = f"[text2]{kid}:{key}{track_kid_marker} {source}"
+                        if not any(f"{kid}:{key}" in str(x.label) for x in tree.children):
+                            tree.add(label)
+
+                def on_error(message: str):
+                    tree = drm_trees.get(tree_key)
+                    if tree:
+                        tree.add(f"[logging.level.error]{message}")
+
+                return on_pssh_init, on_key_found, on_error
 
             try:
                 with Live(Padding(download_table, (1, 5)), console=console, refresh_per_second=5):
@@ -547,14 +481,14 @@ class dl:
                                 pool.submit(
                                     track.download,
                                     session=service.session,
-                                    prepare_drm=partial(
-                                        partial(self.prepare_drm, table=download_table),
+                                    prepare_drm=self.drm_manager.get_prepare_drm_partial(
                                         track=track,
                                         title=title,
                                         certificate=partial(
                                             service.get_widevine_service_certificate, title=title, track=track
                                         ),
                                         licence=partial(service.get_widevine_license, title=title, track=track),
+                                        drm_callbacks=get_drm_callbacks(),
                                         cdm_only=cdm_only,
                                         vaults_only=vaults_only,
                                         export=export,
@@ -594,106 +528,28 @@ class dl:
                 dl_time = time_elapsed_since(dl_start_time)
                 console.print(Padding(f"Track downloads finished in [progress.elapsed]{dl_time}[/]", (0, 5)))
 
-                video_track_n = 0
-
-                while (
-                    not title.tracks.subtitles
-                    and len(title.tracks.videos) > video_track_n
-                    and any(
-                        x.get("codec_name", "").startswith("eia_")
-                        for x in ffprobe(title.tracks.videos[video_track_n].path).get("streams", [])
-                    )
-                ):
-                    with console.status(f"Checking Video track {video_track_n + 1} for Closed Captions..."):
-                        try:
-                            # TODO: Figure out the real language, it might be different
-                            #       EIA-CC tracks sadly don't carry language information :(
-                            # TODO: Figure out if the CC language is original lang or not.
-                            #       Will need to figure out above first to do so.
-                            video_track = title.tracks.videos[video_track_n]
-                            track_id = f"ccextractor-{video_track.id}"
-                            cc_lang = title.language or video_track.language
-                            cc = video_track.ccextractor(
-                                track_id=track_id,
-                                out_path=config.directories.temp
-                                / config.filenames.subtitle.format(id=track_id, language=cc_lang),
-                                language=cc_lang,
-                                original=False,
-                            )
-                            if cc:
-                                # will not appear in track listings as it's added after all times it lists
-                                title.tracks.add(cc)
-                                self.log.info(f"Extracted a Closed Caption from Video track {video_track_n + 1}")
-                            else:
-                                self.log.info(f"No Closed Captions were found in Video track {video_track_n + 1}")
-                        except EnvironmentError:
-                            self.log.error(
-                                "Cannot extract Closed Captions as the ccextractor executable was not found..."
-                            )
-                            break
-                    video_track_n += 1
-
+                self.post_processor = PostProcessor(no_source, no_folder, sub_format)
+                with console.status("Checking Video track {video_track_n + 1} for Closed Captions..."):
+                    self.post_processor._extract_closed_captions(title)
                 with console.status("Converting Subtitles..."):
-                    for subtitle in title.tracks.subtitles:
-                        if sub_format:
-                            if subtitle.codec != sub_format:
-                                subtitle.convert(sub_format)
-                        elif subtitle.codec == Subtitle.Codec.TimedTextMarkupLang:
-                            # MKV does not support TTML, VTT is the next best option
-                            subtitle.convert(Subtitle.Codec.WebVTT)
-
+                    self.post_processor._convert_subtitles(title)
                 with console.status("Checking Subtitles for Fonts..."):
-                    font_names = []
-                    for subtitle in title.tracks.subtitles:
-                        if subtitle.codec == Subtitle.Codec.SubStationAlphav4:
-                            for line in subtitle.path.read_text("utf8").splitlines():
-                                if line.startswith("Style: "):
-                                    font_names.append(line.removesuffix("Style: ").split(",")[1])
-
-                    font_count = 0
-                    system_fonts = get_system_fonts()
-                    for font_name in set(font_names):
-                        family_dir = Path(config.directories.fonts, font_name)
-                        fonts_from_system = [file for name, file in system_fonts.items() if name.startswith(font_name)]
-                        if family_dir.exists():
-                            fonts = family_dir.glob("*.*tf")
-                            for font in fonts:
-                                title.tracks.add(Attachment(font, f"{font_name} ({font.stem})"))
-                                font_count += 1
-                        elif fonts_from_system:
-                            for font in fonts_from_system:
-                                title.tracks.add(Attachment(font, f"{font_name} ({font.stem})"))
-                                font_count += 1
-                        else:
-                            self.log.warning(f"Subtitle uses font [text2]{font_name}[/] but it could not be found...")
-
-                    if font_count:
-                        self.log.info(f"Attached {font_count} fonts for the Subtitles")
-
+                    self.post_processor._attach_fonts(title)
                 with console.status("Repackaging tracks with FFMPEG..."):
-                    has_repacked = False
-                    for track in title.tracks:
-                        if track.needs_repack:
-                            track.repackage()
-                            has_repacked = True
-                            events.emit(events.Types.TRACK_REPACKED, track=track)
-                    if has_repacked:
-                        # we don't want to fill up the log with "Repacked x track"
-                        self.log.info("Repacked one or more tracks with FFMPEG")
+                    self.post_processor._repackage_tracks(title)
 
-                muxed_paths = []
+                progress = Progress(
+                    TextColumn("[progress.description]{task.description}"),
+                    SpinnerColumn(finished_text=""),
+                    BarColumn(),
+                    "•",
+                    TimeRemainingColumn(compact=True, elapsed_when_finished=True),
+                    console=console,
+                )
 
+                muxed_paths: list[Path] = []
                 if isinstance(title, (Movie, Episode)):
-                    progress = Progress(
-                        TextColumn("[progress.description]{task.description}"),
-                        SpinnerColumn(finished_text=""),
-                        BarColumn(),
-                        "•",
-                        TimeRemainingColumn(compact=True, elapsed_when_finished=True),
-                        console=console,
-                    )
-
-                    multiplex_tasks: list[tuple[TaskID, Tracks]] = []
+                    tasks = []
                     for video_track in title.tracks.videos or [None]:
                         task_description = "Multiplexing"
                         if video_track:
@@ -708,30 +564,17 @@ class dl:
                         if video_track:
                             task_tracks.videos = [video_track]
 
-                        multiplex_tasks.append((task_id, task_tracks))
+                        tasks.append((task_id, task_tracks))
 
-                    with Live(Padding(progress, (0, 5, 1, 5)), console=console):
-                        for task_id, task_tracks in multiplex_tasks:
-                            progress.start_task(task_id)  # TODO: Needed?
-                            muxed_path, return_code, errors = task_tracks.mux(
-                                str(title), progress=partial(progress.update, task_id=task_id), delete=False
+                    for task_id, task_tracks in tasks:
+                        with Live(Padding(progress, (0, 5, 1, 5)), console=console):
+                            muxed_path = self.post_processor._mux_media(
+                                title, task_tracks, partial(progress.update, task_id=task_id)
                             )
                             muxed_paths.append(muxed_path)
-                            if return_code >= 2:
-                                self.log.error(f"Failed to Mux video to Matroska file ({return_code}):")
-                            elif return_code == 1 or errors:
-                                self.log.warning("mkvmerge had at least one warning or error, continuing anyway...")
-                            for line in errors:
-                                if line.startswith("#GUI#error"):
-                                    self.log.error(line)
-                                else:
-                                    self.log.warning(line)
-                            if return_code >= 2:
-                                sys.exit(1)
-                            for video_track in task_tracks.videos:
-                                video_track.delete()
-                        for track in title.tracks:
-                            track.delete()
+
+                    for track in title.tracks:
+                        track.delete()
                 else:
                     # dont mux
                     muxed_paths.append(title.tracks.audio[0].path)
@@ -746,7 +589,6 @@ class dl:
 
                     final_dir.mkdir(parents=True, exist_ok=True)
                     final_path = final_dir / f"{final_filename}{muxed_path.suffix}"
-
                     shutil.move(muxed_path, final_path)
 
                 title_dl_time = time_elapsed_since(dl_start_time)
@@ -755,213 +597,10 @@ class dl:
                 )
 
             # update cookies
-            cookie_file = self.get_cookie_path(self.service, self.profile)
+            cookie_file = get_cookie_path(self.service, self.profile)
             if cookie_file:
-                self.save_cookies(cookie_file, service.session.cookies)
+                save_cookies(cookie_file, service.session.cookies)
 
         dl_time = time_elapsed_since(start_time)
 
         console.print(Padding(f"Processed all titles in [progress.elapsed]{dl_time}", (0, 5, 1, 5)))
-
-    def prepare_drm(
-        self,
-        drm: DRM_T,
-        track: AnyTrack,
-        title: Title_T,
-        certificate: Callable,
-        licence: Callable,
-        track_kid: Optional[UUID] = None,
-        table: Table = None,
-        cdm_only: bool = False,
-        vaults_only: bool = False,
-        export: Optional[Path] = None,
-    ) -> None:
-        """
-        Prepare the DRM by getting decryption data like KIDs, Keys, and such.
-        The DRM object should be ready for decryption once this function ends.
-        """
-        if not drm:
-            return
-
-        if isinstance(drm, Widevine):
-            with self.DRM_TABLE_LOCK:
-                cek_tree = Tree(Text.assemble(("Widevine", "cyan"), (f"({drm.pssh.dumps()})", "text"), overflow="fold"))
-                pre_existing_tree = next(
-                    (x for x in table.columns[0].cells if isinstance(x, Tree) and x.label == cek_tree.label), None
-                )
-                if pre_existing_tree:
-                    cek_tree = pre_existing_tree
-
-                for kid in drm.kids:
-                    if kid in drm.content_keys:
-                        continue
-
-                    is_track_kid = ["", "*"][kid == track_kid]
-
-                    if not cdm_only:
-                        content_key, vault_used = self.vaults.get_key(kid)
-                        if content_key:
-                            drm.content_keys[kid] = content_key
-                            label = f"[text2]{kid.hex}:{content_key}{is_track_kid} from {vault_used}"
-                            if not any(f"{kid.hex}:{content_key}" in x.label for x in cek_tree.children):
-                                cek_tree.add(label)
-                            self.vaults.add_key(kid, content_key, excluding=vault_used)
-                        elif vaults_only:
-                            msg = f"No Vault has a Key for {kid.hex} and --vaults-only was used"
-                            cek_tree.add(f"[logging.level.error]{msg}")
-                            if not pre_existing_tree:
-                                table.add_row(cek_tree)
-                            raise Widevine.Exceptions.CEKNotFound(msg)
-
-                    if kid not in drm.content_keys and not vaults_only:
-                        from_vaults = drm.content_keys.copy()
-
-                        try:
-                            drm.get_content_keys(cdm=self.cdm, licence=licence, certificate=certificate)
-                        except Exception as e:
-                            if isinstance(e, (Widevine.Exceptions.EmptyLicense, Widevine.Exceptions.CEKNotFound)):
-                                msg = str(e)
-                            else:
-                                msg = f"An exception occurred in the Service's license function: {e}"
-                            cek_tree.add(f"[logging.level.error]{msg}")
-                            if not pre_existing_tree:
-                                table.add_row(cek_tree)
-                            raise e
-
-                        for kid_, key in drm.content_keys.items():
-                            if key == "0" * 32:
-                                key = f"[red]{key}[/]"
-                            label = f"[text2]{kid_.hex}:{key}{is_track_kid}"
-                            if not any(f"{kid_.hex}:{key}" in x.label for x in cek_tree.children):
-                                cek_tree.add(label)
-
-                        drm.content_keys = {
-                            kid_: key for kid_, key in drm.content_keys.items() if key and key.count("0") != len(key)
-                        }
-
-                        # The CDM keys may have returned blank content keys for KIDs we got from vaults.
-                        # So we re-add the keys from vaults earlier overwriting blanks or removed KIDs data.
-                        drm.content_keys.update(from_vaults)
-
-                        successful_caches = self.vaults.add_keys(drm.content_keys)
-                        self.log.info(
-                            f"Cached {len(drm.content_keys)} Key{'' if len(drm.content_keys) == 1 else 's'} to "
-                            f"{successful_caches}/{len(self.vaults)} Vaults"
-                        )
-                        break  # licensing twice will be unnecessary
-
-                if track_kid and track_kid not in drm.content_keys:
-                    msg = f"No Content Key for KID {track_kid.hex} was returned in the License"
-                    cek_tree.add(f"[logging.level.error]{msg}")
-                    if not pre_existing_tree:
-                        table.add_row(cek_tree)
-                    raise Widevine.Exceptions.CEKNotFound(msg)
-
-                if cek_tree.children and not pre_existing_tree:
-                    table.add_row()
-                    table.add_row(cek_tree)
-
-                if export:
-                    keys = {}
-                    if export.is_file():
-                        keys = jsonpickle.loads(export.read_text(encoding="utf8"))
-                    if str(title) not in keys:
-                        keys[str(title)] = {}
-                    if str(track) not in keys[str(title)]:
-                        keys[str(title)][str(track)] = {}
-                    keys[str(title)][str(track)].update(drm.content_keys)
-                    export.write_text(jsonpickle.dumps(keys, indent=4), encoding="utf8")
-
-    @staticmethod
-    def get_cookie_path(service: str, profile: Optional[str]) -> Optional[Path]:
-        """Get Service Cookie File Path for Profile."""
-        direct_cookie_file = config.directories.cookies / f"{service}.txt"
-        profile_cookie_file = config.directories.cookies / service / f"{profile}.txt"
-        default_cookie_file = config.directories.cookies / service / "default.txt"
-
-        if direct_cookie_file.exists():
-            return direct_cookie_file
-        elif profile_cookie_file.exists():
-            return profile_cookie_file
-        elif default_cookie_file.exists():
-            return default_cookie_file
-
-    @staticmethod
-    def get_cookie_jar(service: str, profile: Optional[str]) -> Optional[MozillaCookieJar]:
-        """Get Service Cookies for Profile."""
-        cookie_file = dl.get_cookie_path(service, profile)
-        if cookie_file:
-            cookie_jar = MozillaCookieJar(cookie_file)
-            cookie_data = html.unescape(cookie_file.read_text("utf8")).splitlines(keepends=False)
-            for i, line in enumerate(cookie_data):
-                if line and not line.startswith("#"):
-                    line_data = line.lstrip().split("\t")
-                    # Disable client-side expiry checks completely across everywhere
-                    # Even though the cookies are loaded under ignore_expires=True, stuff
-                    # like python-requests may not use them if they are expired
-                    line_data[4] = ""
-                    cookie_data[i] = "\t".join(line_data)
-            cookie_data = "\n".join(cookie_data)
-            cookie_file.write_text(cookie_data, "utf8")
-            cookie_jar.load(ignore_discard=True, ignore_expires=True)
-            return cookie_jar
-
-    @staticmethod
-    def save_cookies(path: Path, cookies: CookieJar):
-        cookie_jar = MozillaCookieJar(path)
-        cookie_jar.load()
-        for cookie in cookies:
-            cookie_jar.set_cookie(cookie)
-        cookie_jar.save(ignore_discard=True)
-
-    @staticmethod
-    def get_credentials(service: str, profile: Optional[str]) -> Optional[Credential]:
-        """Get Service Credentials for Profile."""
-        credentials = config.credentials.get(service)
-        if credentials:
-            if isinstance(credentials, dict):
-                if profile:
-                    credentials = credentials.get(profile) or credentials.get("default")
-                else:
-                    credentials = credentials.get("default")
-            if credentials:
-                if isinstance(credentials, list):
-                    return Credential(*credentials)
-                return Credential.loads(credentials)  # type: ignore
-
-    @staticmethod
-    def get_cdm(service: str, profile: Optional[str] = None) -> Optional[WidevineCdm]:
-        """
-        Get CDM for a specified service (either Local or Remote CDM).
-        Raises a ValueError if there's a problem getting a CDM.
-        """
-        cdm_name = config.cdm.get(service) or config.cdm.get("default")
-        if not cdm_name:
-            return None
-
-        if isinstance(cdm_name, dict):
-            if not profile:
-                return None
-            cdm_name = cdm_name.get(profile) or config.cdm.get("default")
-            if not cdm_name:
-                return None
-
-        cdm_api = next(iter(x for x in config.remote_cdm if x["name"] == cdm_name), None)
-        if cdm_api:
-            del cdm_api["name"]
-            return RemoteCdm(**cdm_api)
-
-        cdm_path = config.directories.wvds / f"{cdm_name}.wvd"
-        if not cdm_path.is_file():
-            raise ValueError(f"{cdm_name} does not exist or is not a file")
-
-        try:
-            device = Device.load(cdm_path)
-        except ConstError as e:
-            if "expected 2 but parsed 1" in str(e):
-                raise ValueError(
-                    f"{cdm_name}.wvd seems to be a v1 WVD file, use `pywidevine migrate --help` to migrate it to v2."
-                )
-            raise ValueError(f"{cdm_name}.wvd is an invalid or corrupt Widevine Device file, {e}")
-
-        return WidevineCdm.from_device(device)

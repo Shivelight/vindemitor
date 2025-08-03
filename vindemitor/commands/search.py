@@ -11,11 +11,12 @@ from rich.padding import Padding
 from rich.rule import Rule
 from rich.tree import Tree
 
-from vindemitor.commands.dl import dl
 from vindemitor.core import binaries
 from vindemitor.core.config import config
 from vindemitor.core.console import console
 from vindemitor.core.constants import context_settings
+from vindemitor.core.cookies import get_cookie_jar, get_cookie_path, save_cookies
+from vindemitor.core.credential import get_credentials
 from vindemitor.core.proxies import Basic, Hola, NordVPN
 from vindemitor.core.service import Service
 from vindemitor.core.services import Services
@@ -53,6 +54,7 @@ def search(ctx: click.Context, no_proxy: bool, profile: Optional[str] = None, pr
 
     with console.status("Loading Service Config...", spinner="dots"):
         service_config_path = Services.get_path(service) / config.filenames.config
+        service_config: dict
         if service_config_path.exists():
             service_config = yaml.safe_load(service_config_path.read_text(encoding="utf8"))
             log.info("Service Config loaded")
@@ -115,8 +117,8 @@ def result(service: Service, profile: Optional[str] = None, **_: Any) -> None:
     service_tag = service.__class__.__name__
 
     with console.status("Authenticating with Service...", spinner="dots"):
-        cookies = dl.get_cookie_jar(service_tag, profile)
-        credential = dl.get_credentials(service_tag, profile)
+        cookies = get_cookie_jar(service_tag, profile)
+        credential = get_credentials(service_tag, profile)
         service.authenticate(cookies, credential)
         if cookies or credential:
             log.info("Authenticated with Service")
@@ -135,9 +137,9 @@ def result(service: Service, profile: Optional[str] = None, **_: Any) -> None:
             search_results.add(result_text + "\n")
 
     # update cookies
-    cookie_file = dl.get_cookie_path(service_tag, profile)
+    cookie_file = get_cookie_path(service_tag, profile)
     if cookie_file:
-        dl.save_cookies(cookie_file, service.session.cookies)
+        save_cookies(cookie_file, service.session.cookies)
 
     console.print(Padding(Rule(f"[rule.text]{len(search_results.children)} Search Results"), (1, 2)))
 
