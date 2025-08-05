@@ -205,6 +205,8 @@ class DASH:
                         )
                     )[2:]
 
+                    drm = DASH.get_drm(rep.findall("ContentProtection") + rep.findall("ContentProtection"))
+
                     tracks.add(
                         track_type(
                             id_=track_id,
@@ -221,6 +223,7 @@ class DASH:
                                     "representation": rep,
                                 }
                             },
+                            drm=drm,
                             **track_args,
                         )
                     )
@@ -255,10 +258,6 @@ class DASH:
         period: Element = track.data["dash"]["period"]
         adaptation_set: Element = track.data["dash"]["adaptation_set"]
         representation: Element = track.data["dash"]["representation"]
-
-        track.drm = DASH.get_drm(
-            representation.findall("ContentProtection") + adaptation_set.findall("ContentProtection")
-        )
 
         manifest_base_url = manifest.findtext("BaseURL")
         if not manifest_base_url:
