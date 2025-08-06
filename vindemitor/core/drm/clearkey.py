@@ -14,6 +14,7 @@ from requests import Session
 
 class ClearKey:
     """AES Clear Key DRM System."""
+
     def __init__(self, key: Union[bytes, str], iv: Optional[Union[bytes, str]] = None):
         """
         Generally IV should be provided where possible. If not provided, it will be
@@ -41,9 +42,7 @@ class ClearKey:
         if not path or not path.exists():
             raise ValueError("Tried to decrypt a file that does not exist.")
 
-        decrypted = AES. \
-            new(self.key, AES.MODE_CBC, self.iv). \
-            decrypt(path.read_bytes())
+        decrypted = AES.new(self.key, AES.MODE_CBC, self.iv).decrypt(path.read_bytes())
 
         try:
             decrypted = unpad(decrypted, AES.block_size)

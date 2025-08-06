@@ -146,7 +146,7 @@ def merge_segmented_webvtt(vtt_raw: str, segment_durations: Optional[list[int]] 
     for lang in vtt.get_languages():
         prev_caption = None
         duplicate_index: list[int] = []
-        captions = vtt.get_captions(lang)
+        captions: list[CaptionExt] = vtt.get_captions(lang)
 
         if captions[0].segment_index == 0:
             first_segment_mpegts = captions[0].mpegts

@@ -7,7 +7,7 @@ from pywidevine.cdm import Cdm as WidevineCdm
 
 
 class ContextData:
-    def __init__(self, config: dict, cdm: WidevineCdm, proxy_providers: list, profile: Optional[str] = None):
+    def __init__(self, config: dict, cdm: WidevineCdm | None, proxy_providers: list, profile: Optional[str] = None):
         self.config = config
         self.cdm = cdm
         self.proxy_providers = proxy_providers

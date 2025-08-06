@@ -65,7 +65,7 @@ def cfg(ctx: click.Context, key: str, value: str, unset: bool, list_: bool) -> N
 
     if not is_write and not is_delete:
         data = data.mlget(key_items, default=KeyError)
-        if data == KeyError:
+        if data is KeyError:
             raise click.ClickException(f"Key '{key}' does not exist in the config.")
         yaml.dump(data, sys.stdout)
     else:
