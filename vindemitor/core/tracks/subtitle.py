@@ -7,10 +7,9 @@ from enum import Enum
 from functools import partial
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Union
 
 import pycaption
-import requests
 from construct import Container
 from pycaption import Caption, CaptionList, CaptionNode, WebVTTReader
 from pycaption.geometry import Layout
@@ -21,6 +20,9 @@ from vindemitor.core import binaries
 from vindemitor.core.tracks.track import Track
 from vindemitor.core.utilities import try_ensure_utf8
 from vindemitor.core.utils.webvtt import merge_segmented_webvtt
+
+if TYPE_CHECKING:
+    from vindemitor.core.drm_manager import DRMManager
 
 
 class Subtitle(Track):
@@ -190,12 +192,11 @@ class Subtitle(Track):
 
     def download(
         self,
-        session: requests.Session,
-        prepare_drm: partial,
+        drm_manager: DRMManager,
         max_workers: Optional[int] = None,
         progress: Optional[partial] = None,
     ):
-        super().download(session, prepare_drm, max_workers, progress)
+        super().download(drm_manager, max_workers, progress)
         if not self.path:
             return
 

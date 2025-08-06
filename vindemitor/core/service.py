@@ -54,11 +54,11 @@ class Service(metaclass=ABCMeta):
                 with console.status("Checking if current region is Geoblocked...", spinner="dots"):
                     if self.GEOFENCE:
                         # no explicit proxy, let's get one to GEOFENCE if needed
-                        current_region = get_ip_info(self.session)["country"].lower()
+                        current_region = get_ip_info(self.session)["country"].lower()  # TODO: handle failure
                         if any(x.lower() == current_region for x in self.GEOFENCE):
                             self.log.info("Service is not Geoblocked in your region")
                         else:
-                            requested_proxy = self.GEOFENCE[0]  # first is likely main region
+                            requested_proxy = self.GEOFENCE[0]  # first is likely main region # TODO: iterate
                             self.log.info(f"Service is Geoblocked in your region, getting a Proxy to {requested_proxy}")
                             for proxy_provider in ctx.obj.proxy_providers:
                                 proxy = proxy_provider.get_proxy(requested_proxy)
@@ -136,7 +136,7 @@ class Service(metaclass=ABCMeta):
 
     def get_widevine_service_certificate(
         self, *, challenge: bytes, title: Title_T, track: AnyTrack
-    ) -> Union[bytes, str]:
+    ) -> Union[bytes, str] | None:
         """
         Get the Widevine Service Certificate used for Privacy Mode.
 
@@ -149,7 +149,7 @@ class Service(metaclass=ABCMeta):
             Decode the data, return as is to reduce unnecessary computations.
         """
 
-    def get_widevine_license(self, *, challenge: bytes, title: Title_T, track: AnyTrack) -> Optional[Union[bytes, str]]:
+    def get_widevine_license(self, *, challenge: bytes, title: Title_T, track: AnyTrack) -> Union[bytes, str]:
         """
         Get a Widevine License message by sending a License Request (challenge).
 
@@ -167,6 +167,9 @@ class Service(metaclass=ABCMeta):
         :return: The License response as Bytes or a Base64 string. Don't Base64 Encode or
             Decode the data, return as is to reduce unnecessary computations.
         """
+        raise NotImplementedError(
+            f"Widevine license functionality has not been implemented by {self.__class__.__name__}"
+        )
 
     # Required Abstract functions
     # The following functions *must* be implemented by the Service.

@@ -9,7 +9,7 @@ import sys
 from copy import copy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 from urllib.parse import urljoin, urlparse
 from uuid import UUID
 from zlib import crc32
@@ -21,13 +21,17 @@ from pywidevine.cdm import Cdm as WidevineCdm
 from pywidevine.pssh import PSSH
 from requests import Session
 
-from vindemitor.core.constants import DOWNLOAD_CANCELLED, DOWNLOAD_LICENCE_ONLY, AnyTrack
+from vindemitor.core.constants import DOWNLOAD_CANCELLED, DOWNLOAD_LICENCE_ONLY
 from vindemitor.core.downloaders import requests as requests_downloader
 from vindemitor.core.drm import Widevine
 from vindemitor.core.events import events
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
+from vindemitor.core.tracks.track import Track
 from vindemitor.core.utilities import is_close_match, try_ensure_utf8
 from vindemitor.core.utils.xml import load_xml
+
+if TYPE_CHECKING:
+    from vindemitor.core.drm_manager import DRMManager
 
 
 class DASH:
@@ -235,22 +239,21 @@ class DASH:
 
     @staticmethod
     def download_track(
-        track: AnyTrack,
+        track: Track,
         save_path: Path,
         save_dir: Path,
         progress: partial,
         session: Optional[Session] = None,
-        proxy: Optional[str] = None,
         max_workers: Optional[int] = None,
-        license_widevine: Optional[Callable] = None,
+        drm_manager: Optional[DRMManager] = None,
     ):
+        if drm_manager and not session:
+            session = drm_manager.get_session()
+
         if not session:
             session = Session()
         elif not isinstance(session, Session):
             raise TypeError(f"Expected session to be a {Session}, not {session!r}")
-
-        if proxy:
-            session.proxies.update({"all": proxy})
 
         log = logging.getLogger("DASH")
 
@@ -440,20 +443,16 @@ class DASH:
         if track.drm:
             # last chance to find the KID, assumes first segment will hold the init data
             track_kid = track_kid or track.get_key_id(url=segments[0][0], session=session)
-            # TODO: What if we don't want to use the first DRM system?
-            drm = track.drm[0]
-            if isinstance(drm, Widevine):
-                # license and grab content keys
-                try:
-                    if not license_widevine:
-                        raise ValueError("license_widevine func must be supplied to use Widevine DRM")
-                    progress(downloaded="LICENSING")
-                    license_widevine(drm, track_kid=track_kid)
-                    progress(downloaded="[yellow]LICENSED")
-                except Exception:  # noqa
-                    DOWNLOAD_CANCELLED.set()  # skip pending track downloads
-                    progress(downloaded="[red]FAILED")
-                    raise
+            try:
+                if not drm_manager:
+                    raise ValueError("license_widevine func must be supplied to use Widevine DRM")
+                progress(downloaded="LICENSING")
+                drm = drm_manager.prepare_drm_keys(track=track, track_kid=track_kid)
+                progress(downloaded="[yellow]LICENSED")
+            except Exception:
+                DOWNLOAD_CANCELLED.set()  # skip pending track downloads
+                progress(downloaded="[red]FAILED")
+                raise
         else:
             drm = None
 
@@ -468,6 +467,8 @@ class DASH:
             # aria2(c) is shit and doesn't support the Range header, fallback to the requests downloader
             downloader = requests_downloader
             log.warning("Falling back to the requests downloader as aria2(c) doesn't support the Range header")
+
+        proxy = next(iter(session.proxies.values()), None)
 
         for status_update in downloader(
             urls=[

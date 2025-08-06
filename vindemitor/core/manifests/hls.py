@@ -7,7 +7,7 @@ import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from urllib.parse import urljoin
 from zlib import crc32
 
@@ -26,6 +26,9 @@ from vindemitor.core.drm import DRM_T, ClearKey, Widevine
 from vindemitor.core.events import events
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
 from vindemitor.core.utilities import get_extension, is_close_match, try_ensure_utf8
+
+if TYPE_CHECKING:
+    from vindemitor.core.drm_manager import DRMManager
 
 
 class HLS:
@@ -210,17 +213,16 @@ class HLS:
         save_dir: Path,
         progress: partial,
         session: Optional[Session] = None,
-        proxy: Optional[str] = None,
         max_workers: Optional[int] = None,
-        license_widevine: Optional[Callable] = None,
+        drm_manager: Optional[DRMManager] = None,
     ) -> None:
+        if drm_manager and not session:
+            session = drm_manager.get_session()
+
         if not session:
             session = Session()
         elif not isinstance(session, Session):
             raise TypeError(f"Expected session to be a {Session}, not {session!r}")
-
-        if proxy:
-            session.proxies.update({"all": proxy})
 
         log = logging.getLogger("HLS")
 
@@ -235,20 +237,16 @@ class HLS:
             sys.exit(1)
 
         if track.drm:
-            # TODO: What if we don't want to use the first DRM system?
-            session_drm = track.drm[0]
-            if isinstance(session_drm, Widevine):
-                # license and grab content keys
-                try:
-                    if not license_widevine:
-                        raise ValueError("license_widevine func must be supplied to use Widevine DRM")
-                    progress(downloaded="LICENSING")
-                    license_widevine(session_drm)
-                    progress(downloaded="[yellow]LICENSED")
-                except Exception:  # noqa
-                    DOWNLOAD_CANCELLED.set()  # skip pending track downloads
-                    progress(downloaded="[red]FAILED")
-                    raise
+            try:
+                if not drm_manager:
+                    raise ValueError("license_widevine func must be supplied to use Widevine DRM")
+                progress(downloaded="LICENSING")
+                session_drm = drm_manager.prepare_drm_keys(track=track)
+                progress(downloaded="[yellow]LICENSED")
+            except Exception:
+                DOWNLOAD_CANCELLED.set()  # skip pending track downloads
+                progress(downloaded="[red]FAILED")
+                raise
         else:
             session_drm = None
 
@@ -290,6 +288,8 @@ class HLS:
         track.data["hls"]["segment_durations"] = segment_durations
 
         segment_save_dir = save_dir / "segments"
+
+        proxy = next(iter(session.proxies.values()), None)
 
         for status_update in downloader(
             urls=urls,
@@ -488,7 +488,7 @@ class HLS:
                             else:
                                 track_kid = None
                             progress(downloaded="LICENSING")
-                            license_widevine(drm, track_kid=track_kid)
+                            drm_manager.prepare_drm_keys(track, track_kid=track_kid, custom_drm=drm)
                             progress(downloaded="[yellow]LICENSED")
                         except Exception:  # noqa
                             DOWNLOAD_CANCELLED.set()  # skip pending track downloads

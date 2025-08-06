@@ -12,7 +12,6 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from threading import Lock
 from typing import Any, Callable, Optional
 
 import click
@@ -22,7 +21,7 @@ from rich.console import Group
 from rich.live import Live
 from rich.padding import Padding
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
@@ -45,11 +44,9 @@ from vindemitor.core.titles import Movie, Song
 from vindemitor.core.titles.episode import Episode
 from vindemitor.core.track_selector import TrackSelector
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
-from vindemitor.core.tracks.attachment import Attachment
-from vindemitor.core.utilities import get_system_fonts, is_close_match, time_elapsed_since
+from vindemitor.core.utilities import is_close_match, time_elapsed_since
 from vindemitor.core.utils.click_types import LANGUAGE_RANGE, QUALITY_LIST, SEASON_RANGE, ContextData, MultipleChoice
 from vindemitor.core.utils.collections import merge_dict
-from vindemitor.core.utils.subprocess import ffprobe
 from vindemitor.core.vaults import Vaults
 
 
@@ -194,8 +191,6 @@ class dl:
     def cli(ctx: click.Context, **kwargs: Any) -> dl:
         return dl(ctx, **kwargs)
 
-    DRM_TABLE_LOCK = Lock()
-
     def __init__(
         self,
         ctx: click.Context,
@@ -337,7 +332,6 @@ class dl:
     ) -> None:
         start_time = time.time()
 
-        self.drm_manager = DRMManager(self.cdm, self.vaults)
         self.track_selector = TrackSelector(
             quality=quality,
             vcodec=vcodec,
@@ -356,7 +350,8 @@ class dl:
         )
 
         if cdm_only is None:
-            vaults_only = None
+            cdm_only = False
+            vaults_only = False
         else:
             vaults_only = not cdm_only
 
@@ -473,6 +468,9 @@ class dl:
 
                 return on_pssh_init, on_key_found, on_error
 
+            drm_manager = DRMManager(
+                self.cdm, self.vaults, cdm_only, vaults_only, service, title, export, get_drm_callbacks()
+            )
             try:
                 with Live(Padding(download_table, (1, 5)), console=console, refresh_per_second=5):
                     with ThreadPoolExecutor(downloads) as pool:
@@ -480,19 +478,7 @@ class dl:
                             (
                                 pool.submit(
                                     track.download,
-                                    session=service.session,
-                                    prepare_drm=self.drm_manager.get_prepare_drm_partial(
-                                        track=track,
-                                        title=title,
-                                        certificate=partial(
-                                            service.get_widevine_service_certificate, title=title, track=track
-                                        ),
-                                        licence=partial(service.get_widevine_license, title=title, track=track),
-                                        drm_callbacks=get_drm_callbacks(),
-                                        cdm_only=cdm_only,
-                                        vaults_only=vaults_only,
-                                        export=export,
-                                    ),
+                                    drm_manager=drm_manager,
                                     max_workers=workers,
                                     progress=tracks_progress_callables[i],
                                 )

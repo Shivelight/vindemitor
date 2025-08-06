@@ -1,23 +1,15 @@
 import logging
-import shutil
-import subprocess
 import sys
-from ast import Call
-from contextlib import AbstractContextManager, nullcontext
-from functools import partial
 from pathlib import Path
-from typing import Any, Callable
-
-from pymediainfo import MediaInfo
+from typing import Any
 
 from vindemitor.core.events import events
 
 from .config import config
-from .console import console
-from .titles import Episode, Movie, Song, Title_T
+from .titles import Title_T
 from .tracks import Subtitle, Tracks
 from .tracks.attachment import Attachment
-from .utilities import ensure_context, get_system_fonts
+from .utilities import get_system_fonts
 from .utils.subprocess import ffprobe
 
 

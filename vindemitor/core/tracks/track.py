@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import html
 import logging
@@ -9,7 +11,7 @@ from copy import copy
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Union
 from uuid import UUID
 from zlib import crc32
 
@@ -24,6 +26,9 @@ from vindemitor.core.drm import DRM_T, Widevine
 from vindemitor.core.events import events
 from vindemitor.core.utilities import get_boxes, try_ensure_utf8
 from vindemitor.core.utils.subprocess import ffprobe
+
+if TYPE_CHECKING:
+    from vindemitor.core.drm_manager import DRMManager
 
 
 class Track:
@@ -169,10 +174,9 @@ class Track:
 
     def download(
         self,
-        session: Session,
-        prepare_drm: partial,
-        max_workers: Optional[int] = None,
-        progress: Optional[partial] = None,
+        drm_manager: DRMManager | None = None,
+        max_workers: int | None = None,
+        progress: partial | None = None,
     ):
         """Download and optionally Decrypt this Track."""
         from vindemitor.core.manifests import DASH, HLS
@@ -185,8 +189,6 @@ class Track:
             return
 
         log = logging.getLogger("track")
-
-        proxy = next(iter(session.proxies.values()), None)
 
         track_type = self.__class__.__name__
         save_path = config.directories.temp / f"{track_type}_{self.id}.mp4"
@@ -226,10 +228,8 @@ class Track:
                     save_path=save_path,
                     save_dir=save_dir,
                     progress=progress,
-                    session=session,
-                    proxy=proxy,
                     max_workers=max_workers,
-                    license_widevine=prepare_drm,
+                    drm_manager=drm_manager,
                 )
             elif self.descriptor == self.Descriptor.DASH:
                 DASH.download_track(
@@ -237,12 +237,14 @@ class Track:
                     save_path=save_path,
                     save_dir=save_dir,
                     progress=progress,
-                    session=session,
-                    proxy=proxy,
                     max_workers=max_workers,
-                    license_widevine=prepare_drm,
+                    drm_manager=drm_manager,
                 )
             elif self.descriptor == self.Descriptor.URL:
+                if drm_manager:
+                    session = drm_manager.get_session()
+                else:
+                    session = Session()
                 try:
                     if not self.drm and track_type in ("Video", "Audio"):
                         # the service might not have explicitly defined the `drm` property
@@ -255,20 +257,18 @@ class Track:
 
                     if self.drm:
                         track_kid = self.get_key_id(session=session)
-                        drm = self.drm[0]  # just use the first supported DRM system for now
-                        if isinstance(drm, Widevine):
-                            # license and grab content keys
-                            if not prepare_drm:
-                                raise ValueError("prepare_drm func must be supplied to use Widevine DRM")
-                            progress(downloaded="LICENSING")
-                            prepare_drm(drm, track_kid=track_kid)
-                            progress(downloaded="[yellow]LICENSED")
+                        if not drm_manager:
+                            raise ValueError("DRMManager must be supplied to use Widevine DRM")
+                        progress(downloaded="LICENSING")
+                        drm = drm_manager.prepare_drm_keys(self, track_kid=track_kid)
+                        progress(downloaded="[yellow]LICENSED")
                     else:
                         drm = None
 
                     if DOWNLOAD_LICENCE_ONLY.is_set():
                         progress(downloaded="[yellow]SKIPPED")
                     else:
+                        proxy = next(iter(session.proxies.values()), None)
                         for status_update in self.downloader(
                             urls=self.url,
                             output_dir=save_path.parent,

@@ -168,7 +168,12 @@ class Widevine:
         """Get all Key IDs."""
         return self._pssh.key_ids
 
-    def get_content_keys(self, cdm: WidevineCdm, certificate: Callable, licence: Callable) -> None:
+    def get_content_keys(
+        self,
+        cdm: WidevineCdm,
+        certificate: Callable[[bytes], bytes | str | None],
+        licence: Callable[[bytes], bytes | str],
+    ) -> None:
         """
         Create a CDM Session and obtain Content Keys for this DRM Instance.
         The certificate and license params are expected to be a function and will
@@ -181,9 +186,9 @@ class Widevine:
             session_id = cdm.open()
 
             try:
-                cdm.set_service_certificate(session_id, certificate(challenge=cdm.service_certificate_challenge))
+                cdm.set_service_certificate(session_id, certificate(cdm.service_certificate_challenge))
 
-                cdm.parse_license(session_id, licence(challenge=cdm.get_license_challenge(session_id, self.pssh)))
+                cdm.parse_license(session_id, licence(cdm.get_license_challenge(session_id, self.pssh)))
 
                 self.content_keys = {key.kid: key.key.hex() for key in cdm.get_keys(session_id, "CONTENT")}
                 if not self.content_keys:
