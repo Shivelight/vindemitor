@@ -171,7 +171,7 @@ class MySQL(Vault):
         finally:
             cursor.close()
 
-    def create_table(self, name: str):
+    def create_table(self, name: str) -> None:
         """Create a Table with the specified name if not yet created."""
         if self.has_table(name):
             return

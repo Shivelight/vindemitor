@@ -48,7 +48,7 @@ class Title:
 
         self.tracks = Tracks()
 
-    def __eq__(self, other: Title) -> bool:
+    def __eq__(self, other: Any) -> bool:
         return self.id == other.id
 
     @abstractmethod

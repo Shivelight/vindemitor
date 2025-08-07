@@ -523,6 +523,7 @@ class dl:
                     self.post_processor._attach_fonts(title)
                 with console.status("Repackaging tracks with FFMPEG..."):
                     self.post_processor._repackage_tracks(title)
+                # TODO: user-defined post-processor?
 
                 progress = Progress(
                     TextColumn("[progress.description]{task.description}"),

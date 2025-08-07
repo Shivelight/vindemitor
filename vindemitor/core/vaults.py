@@ -17,7 +17,7 @@ class Vaults:
 
     def __init__(self, service: Optional[str] = None):
         self.service = service or ""
-        self.vaults = []
+        self.vaults: list[Vault] = []
 
     def __iter__(self) -> Iterator[Vault]:
         return iter(self.vaults)

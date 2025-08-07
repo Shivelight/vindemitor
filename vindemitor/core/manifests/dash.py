@@ -246,7 +246,7 @@ class DASH:
         session: Optional[Session] = None,
         max_workers: Optional[int] = None,
         drm_manager: Optional[DRMManager] = None,
-    ):
+    ) -> None:
         if drm_manager and not session:
             session = drm_manager.get_session()
 

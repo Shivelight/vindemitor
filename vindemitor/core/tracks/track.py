@@ -498,13 +498,13 @@ class Track:
         if not self.path or not self.path.exists():
             raise ValueError("Cannot repackage a Track that has not been downloaded.")
 
-        if not binaries.FFMPEG:
-            raise EnvironmentError('FFmpeg executable "ffmpeg" was not found but is required for this call.')
-
         original_path = self.path
         output_path = original_path.with_stem(f"{original_path.stem}_repack")
 
-        def _ffmpeg(extra_args: list[str] = None):
+        def _ffmpeg(extra_args: list[str] | None = None):
+            if not binaries.FFMPEG:
+                raise EnvironmentError('FFmpeg executable "ffmpeg" was not found but is required for this call.')
+
             subprocess.run(
                 [
                     binaries.FFMPEG,

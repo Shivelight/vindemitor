@@ -240,7 +240,7 @@ class HLS:
         if track.drm:
             try:
                 if not drm_manager:
-                    raise ValueError("license_widevine func must be supplied to use Widevine DRM")
+                    raise ValueError("DRMManager must be supplied to use Widevine DRM")
                 progress(downloaded="LICENSING")
                 session_drm = drm_manager.prepare_drm_keys(track=track)
                 progress(downloaded="[yellow]LICENSED")
@@ -320,10 +320,11 @@ class HLS:
         discon_i = 0
         range_offset = 0
         map_data: Optional[tuple[m3u8.model.InitializationSection, bytes]] = None
+        encryption_data: Optional[tuple[Optional[m3u8.Key], DRM_T]]
         if session_drm:
-            encryption_data: Optional[tuple[Optional[m3u8.Key], DRM_T]] = (None, session_drm)
+            encryption_data = (None, session_drm)
         else:
-            encryption_data: Optional[tuple[Optional[m3u8.Key], DRM_T]] = None
+            encryption_data = None
 
         i = -1
         for real_i, segment in enumerate(master.segments):
@@ -332,7 +333,7 @@ class HLS:
 
             is_last_segment = (real_i + 1) == len(master.segments)
 
-            def merge(to: Path, via: list[Path], delete: bool = False, include_map_data: bool = False):
+            def merge(to: Path, via: list[Path], delete: bool = False, include_map_data: bool = False) -> None:
                 """
                 Merge all files to a given path, optionally including map data.
 
@@ -405,7 +406,7 @@ class HLS:
 
                 return decrypted_path
 
-            def merge_discontinuity(include_this_segment: bool, include_map_data: bool = True):
+            def merge_discontinuity(include_this_segment: bool, include_map_data: bool = True) -> None:
                 """
                 Merge all segments of the discontinuity.
 
@@ -462,7 +463,7 @@ class HLS:
                 if segment.init_section and (not map_data or segment.init_section != map_data[0]):
                     if segment.init_section.byterange:
                         init_byte_range = HLS.calculate_byte_range(segment.init_section.byterange, range_offset)
-                        range_offset = init_byte_range.split("-")[0]
+                        range_offset = int(init_byte_range.split("-")[0])
                         init_range_header = {"Range": f"bytes={init_byte_range}"}
                     else:
                         init_range_header = {}
@@ -484,6 +485,8 @@ class HLS:
                     drm = HLS.get_drm(key, session)
                     if isinstance(drm, Widevine):
                         try:
+                            if not drm_manager:
+                                raise ValueError("DRMManager must be supplied to use Widevine DRM")
                             if map_data:
                                 track_kid = track.get_key_id(map_data[1])
                             else:

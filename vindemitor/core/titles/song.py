@@ -82,7 +82,7 @@ class Song(Title):
         ).strip()
 
     def get_filename(self, media_info: MediaInfo, folder: bool = False, show_service: bool = True) -> str:
-        audio_track = next(iter(media_info.audio_tracks), None)
+        audio_track = next(iter(media_info.audio_tracks))
         codec = audio_track.format
         channel_layout = audio_track.channel_layout or audio_track.channellayout_original
         channels = float(sum({"LFE": 0.1}.get(position.upper(), 1) for position in channel_layout.split(" ")))
