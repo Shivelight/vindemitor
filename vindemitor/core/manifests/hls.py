@@ -15,6 +15,7 @@ import m3u8
 import requests
 from langcodes import Language, tag_is_valid
 from m3u8 import M3U8
+from m3u8.model import Key, SessionKey
 from pywidevine.cdm import Cdm as WidevineCdm
 from pywidevine.pssh import PSSH
 from requests import Session
@@ -612,7 +613,7 @@ class HLS:
             raise NotImplementedError(f"None of the key systems are supported: {', '.join(unsupported_systems)}")
 
     @staticmethod
-    def get_drm(key: Union[m3u8.model.SessionKey, m3u8.model.Key], session: Optional[requests.Session] = None) -> DRM_T:
+    def get_drm(key: Union[SessionKey, Key], session: Optional[requests.Session] = None) -> DRM_T:
         """
         Convert HLS EXT-X-KEY data to an initialized DRM object.
 
@@ -631,12 +632,16 @@ class HLS:
         # TODO: Add support for 'SAMPLE-AES', 'AES-CTR', 'AES-CBC', 'ClearKey'
         if key.method == "AES-128":
             drm = ClearKey.from_m3u_key(key, session)
-        elif key.method == "ISO-23001-7":
+        elif key.method == "ISO-23001-7" and key.uri:
             drm = Widevine(pssh=PSSH.new(key_ids=[key.uri.split(",")[-1]], system_id=PSSH.SystemId.Widevine))
-        elif key.keyformat and key.keyformat.lower() == WidevineCdm.urn:
+        elif key.keyformat and key.keyformat.lower() == WidevineCdm.urn and key.uri:
+            keyid: str = key._extra_params.pop("keyid", None)  # type: ignore[attr-defined]
+            if keyid and keyid.lower().startswith("0x"):
+                keyid = keyid[2:]
             drm = Widevine(
                 pssh=PSSH(key.uri.split(",")[-1]),
-                **key._extra_params,  # noqa
+                kid=keyid,
+                **key._extra_params,  # type: ignore[attr-defined]
             )
         else:
             raise NotImplementedError(f"The key system is not supported: {key}")
@@ -644,9 +649,7 @@ class HLS:
         return drm
 
     @staticmethod
-    def get_all_drm(
-        keys: list[Union[m3u8.model.SessionKey, m3u8.model.Key]], proxy: Optional[str] = None
-    ) -> list[DRM_T]:
+    def get_all_drm(keys: list[Union[SessionKey, Key]], session: requests.Session | None = None) -> list[DRM_T]:
         """
         Convert HLS EXT-X-KEY data to initialized DRM objects.
 
@@ -656,7 +659,7 @@ class HLS:
 
         Raises a NotImplementedError if none of the key systems are supported.
         """
-        unsupported_keys: list[m3u8.Key] = []
+        unsupported_keys: list[Key] = []
         drm_objects: list[DRM_T] = []
 
         if any(key.method == "NONE" for key in keys):
@@ -664,7 +667,7 @@ class HLS:
 
         for key in keys:
             try:
-                drm = HLS.get_drm(key, proxy)
+                drm = HLS.get_drm(key, session)
                 drm_objects.append(drm)
             except NotImplementedError:
                 unsupported_keys.append(key)
