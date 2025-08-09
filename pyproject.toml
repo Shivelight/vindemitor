@@ -70,12 +70,14 @@ vindemitor = "vindemitor.core.__main__:main"
 dev = [
   "isort>=5.13.2,<6",
   "mypy-protobuf>=3.6.0,<4",
-  "mypy>=1.9.0,<2",
+  "mypy>=1.17.0,<2",
   "pre-commit>=3.7.0,<4",
-  "ruff~=0.12.5",
+  "ruff~=0.12.7",
   "types-PyMySQL>=1.1.0.1,<2",
+  "types-m3u8>=6.0.0.20250708",
   "types-protobuf>=4.24.0.20240408,<5",
-  "types-requests>=2.31.0.20240406,<3",
+  "types-pyyaml>=6.0.12.20250516",
+  "types-requests>=2.32.4.20250611",
 ]
 
 [build-system]
@@ -84,6 +86,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
 include = [
+  "vindemitor",
   "CHANGELOG.md",
   "README.md",
   "LICENSE",
@@ -99,9 +102,12 @@ line_length = 118
 check_untyped_defs = true
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
-follow_imports = "silent"
+follow_imports = "normal"
 ignore_missing_imports = true
 no_implicit_optional = true
+explicit_package_bases = true
+allow_redefinition_new = true
+local_partial_types = true
 
 [tool.ruff]
 force-exclude = true
