@@ -1,6 +1,5 @@
 import atexit
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import click
@@ -74,10 +73,11 @@ def main(version: bool, debug: bool, log_path: Path) -> None:
         ),
         Padding(
             Group(
-                f"v[repr.number]{__version__}[/] Copyright © 2019-{datetime.now().year} rlaphoenix, Shivelight",
+                f"v[repr.number]{__version__}[/] Copyright © 2025 Shivelight",
+                "v[rgb(166,173,200)]3.3.3[/] Copyright © 2019-2024 rlaphoenix",
                 "[bright_blue]https://github.com/Shivelight/vindemitor[/]",
             ),
-            (0, 15, 1, 14),
+            (0, 20, 1, 20),
             expand=True,
         ),
         justify="left",
