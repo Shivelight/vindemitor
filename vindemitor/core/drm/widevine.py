@@ -13,13 +13,13 @@ from construct import Container
 from pymp4.parser import Box
 from pywidevine.cdm import Cdm as WidevineCdm
 from pywidevine.pssh import PSSH
-from requests import Session
 from rich.text import Text
 
 from vindemitor.core import binaries
 from vindemitor.core.config import config
 from vindemitor.core.console import console
 from vindemitor.core.constants import AnyTrack
+from vindemitor.core.session import DefaultSession, ServiceSession
 from vindemitor.core.utilities import get_boxes
 from vindemitor.core.utils.subprocess import ffprobe
 
@@ -54,7 +54,7 @@ class Widevine:
         self.data: dict = kwargs or {}
 
     @classmethod
-    def from_track(cls, track: AnyTrack, session: Optional[Session] = None) -> Widevine:
+    def from_track(cls, track: AnyTrack, session: Optional[ServiceSession] = None) -> Widevine:
         """
         Get PSSH and KID from within the Initiation Segment of the Track Data.
         It also tries to get PSSH and KID from other track data like M3U8 data
@@ -72,7 +72,7 @@ class Widevine:
             KIDNotFound - If the KID was not found within the data or PSSH.
         """
         if not session:
-            session = Session()
+            session = DefaultSession()
             session.headers.update(config.headers)
 
         kid: Optional[UUID] = None

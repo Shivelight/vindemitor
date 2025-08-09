@@ -16,7 +16,6 @@ from uuid import UUID
 from zlib import crc32
 
 from langcodes import Language
-from requests import Session
 
 from vindemitor.core import binaries
 from vindemitor.core.config import config
@@ -24,6 +23,7 @@ from vindemitor.core.constants import DOWNLOAD_CANCELLED, DOWNLOAD_LICENCE_ONLY
 from vindemitor.core.downloaders import aria2c, curl_impersonate, requests
 from vindemitor.core.drm import DRM_T, Widevine
 from vindemitor.core.events import events
+from vindemitor.core.session import DefaultSession, ServiceSession
 from vindemitor.core.utilities import get_boxes, try_ensure_utf8
 from vindemitor.core.utils.subprocess import ffprobe
 
@@ -244,7 +244,7 @@ class Track:
                 if drm_manager:
                     session = drm_manager.get_session()
                 else:
-                    session = Session()
+                    session = DefaultSession()
                 try:
                     if not self.drm and track_type in ("Video", "Audio"):
                         # the service might not have explicitly defined the `drm` property
@@ -416,7 +416,7 @@ class Track:
         maximum_size: int = 20000,
         url: Optional[str] = None,
         byte_range: Optional[str] = None,
-        session: Optional[Session] = None,
+        session: Optional[ServiceSession] = None,
     ) -> bytes:
         """
         Get the Track's Initial Segment Data Stream.
@@ -446,8 +446,8 @@ class Track:
             raise TypeError(f"Expected url to be a {str}, not {type(url)}")
         if not isinstance(byte_range, (str, type(None))):
             raise TypeError(f"Expected byte_range to be a {str}, not {type(byte_range)}")
-        if not isinstance(session, (Session, type(None))):
-            raise TypeError(f"Expected session to be a {Session}, not {type(session)}")
+        if not isinstance(session, (ServiceSession, type(None))):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {type(session)}")
 
         if not url:
             if self.descriptor != self.Descriptor.URL:
@@ -457,7 +457,7 @@ class Track:
             url = self.url
 
         if not session:
-            session = Session()
+            session = DefaultSession()
 
         content_length = maximum_size
 

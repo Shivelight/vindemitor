@@ -19,12 +19,12 @@ from langcodes import Language, tag_is_valid
 from lxml.etree import Element, ElementTree
 from pywidevine.cdm import Cdm as WidevineCdm
 from pywidevine.pssh import PSSH
-from requests import Session
 
 from vindemitor.core.constants import DOWNLOAD_CANCELLED, DOWNLOAD_LICENCE_ONLY
 from vindemitor.core.downloaders import requests as requests_downloader
 from vindemitor.core.drm import Widevine
 from vindemitor.core.events import events
+from vindemitor.core.session import DefaultSession, ServiceSession
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
 from vindemitor.core.tracks.track import Track
 from vindemitor.core.utilities import is_close_match, try_ensure_utf8
@@ -50,16 +50,16 @@ class DASH:
         self.url = url
 
     @classmethod
-    def from_url(cls, url: str, session: Optional[Session] = None, **args: Any) -> DASH:
+    def from_url(cls, url: str, session: ServiceSession | None = None, **args: Any) -> DASH:
         if not url:
             raise requests.URLRequired("DASH manifest URL must be provided for relative path computations.")
         if not isinstance(url, str):
             raise TypeError(f"Expected url to be a {str}, not {url!r}")
 
         if not session:
-            session = Session()
-        elif not isinstance(session, Session):
-            raise TypeError(f"Expected session to be a {Session}, not {session!r}")
+            session = DefaultSession()
+        elif not isinstance(session, ServiceSession):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {session!r}")
 
         res = session.get(url, **args)
         if res.url != url:
@@ -243,7 +243,7 @@ class DASH:
         save_path: Path,
         save_dir: Path,
         progress: partial,
-        session: Optional[Session] = None,
+        session: Optional[ServiceSession] = None,
         max_workers: Optional[int] = None,
         drm_manager: Optional[DRMManager] = None,
     ) -> None:
@@ -251,9 +251,9 @@ class DASH:
             session = drm_manager.get_session()
 
         if not session:
-            session = Session()
-        elif not isinstance(session, Session):
-            raise TypeError(f"Expected session to be a {Session}, not {session!r}")
+            session = DefaultSession()
+        elif not isinstance(session, ServiceSession):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {session!r}")
 
         log = logging.getLogger("DASH")
 

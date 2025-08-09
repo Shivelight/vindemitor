@@ -21,6 +21,7 @@ from vindemitor.core.constants import AnyTrack
 from vindemitor.core.credential import Credential
 from vindemitor.core.drm import DRM_T
 from vindemitor.core.search_result import SearchResult
+from vindemitor.core.session import RequestsSession, ServiceSession
 from vindemitor.core.titles import Title_T, Titles_T
 from vindemitor.core.tracks import Chapters, Tracks
 from vindemitor.core.utilities import get_ip_info
@@ -86,7 +87,7 @@ class Service(metaclass=ABCMeta):
     # The functions will be executed in shown order.
 
     @staticmethod
-    def get_session() -> requests.Session:
+    def get_session() -> ServiceSession:
         """
         Creates a Python-requests Session, adds common headers
         from config, cookies, retry handler, and a proxy if available.
@@ -102,7 +103,7 @@ class Service(metaclass=ABCMeta):
             ),
         )
         session.mount("http://", session.adapters["https://"])
-        return session
+        return RequestsSession(session)
 
     def authenticate(self, cookies: Optional[CookieJar] = None, credential: Optional[Credential] = None) -> None:
         """

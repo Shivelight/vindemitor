@@ -18,13 +18,13 @@ from m3u8 import M3U8
 from m3u8.model import Key, SessionKey
 from pywidevine.cdm import Cdm as WidevineCdm
 from pywidevine.pssh import PSSH
-from requests import Session
 
 from vindemitor.core import binaries
 from vindemitor.core.constants import DOWNLOAD_CANCELLED, DOWNLOAD_LICENCE_ONLY, AnyTrack
 from vindemitor.core.downloaders import requests as requests_downloader
 from vindemitor.core.drm import DRM_T, ClearKey, Widevine
 from vindemitor.core.events import events
+from vindemitor.core.session import DefaultSession, ServiceSession
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
 from vindemitor.core.utilities import get_extension, is_close_match, try_ensure_utf8
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 class HLS:
-    def __init__(self, manifest: M3U8, session: Optional[Session] = None):
+    def __init__(self, manifest: M3U8, session: Optional[ServiceSession] = None):
         if not manifest:
             raise ValueError("HLS manifest must be provided.")
         if not isinstance(manifest, M3U8):
@@ -42,19 +42,19 @@ class HLS:
             raise ValueError("Expected the M3U(8) manifest to be a Variant Playlist.")
 
         self.manifest = manifest
-        self.session = session or Session()
+        self.session = session or DefaultSession()
 
     @classmethod
-    def from_url(cls, url: str, session: Optional[Session] = None, **args: Any) -> HLS:
+    def from_url(cls, url: str, session: Optional[ServiceSession] = None, **args: Any) -> HLS:
         if not url:
             raise requests.URLRequired("HLS manifest URL must be provided.")
         if not isinstance(url, str):
             raise TypeError(f"Expected url to be a {str}, not {url!r}")
 
         if not session:
-            session = Session()
-        elif not isinstance(session, Session):
-            raise TypeError(f"Expected session to be a {Session}, not {session!r}")
+            session = DefaultSession()
+        elif not isinstance(session, ServiceSession):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {session!r}")
 
         res = session.get(url, **args)
         if not res.ok:
@@ -213,7 +213,7 @@ class HLS:
         save_path: Path,
         save_dir: Path,
         progress: partial,
-        session: Optional[Session] = None,
+        session: Optional[ServiceSession] = None,
         max_workers: Optional[int] = None,
         drm_manager: Optional[DRMManager] = None,
     ) -> None:
@@ -221,9 +221,9 @@ class HLS:
             session = drm_manager.get_session()
 
         if not session:
-            session = Session()
-        elif not isinstance(session, Session):
-            raise TypeError(f"Expected session to be a {Session}, not {session!r}")
+            session = DefaultSession()
+        elif not isinstance(session, ServiceSession):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {session!r}")
 
         log = logging.getLogger("HLS")
 
@@ -616,7 +616,7 @@ class HLS:
             raise NotImplementedError(f"None of the key systems are supported: {', '.join(unsupported_systems)}")
 
     @staticmethod
-    def get_drm(key: Union[SessionKey, Key], session: Optional[requests.Session] = None) -> DRM_T:
+    def get_drm(key: Union[SessionKey, Key], session: Optional[ServiceSession] = None) -> DRM_T:
         """
         Convert HLS EXT-X-KEY data to an initialized DRM object.
 
@@ -627,10 +627,10 @@ class HLS:
 
         Raises a NotImplementedError if the key system is not supported.
         """
-        if not isinstance(session, (Session, type(None))):
-            raise TypeError(f"Expected session to be a {Session}, not {type(session)}")
+        if not isinstance(session, (ServiceSession, type(None))):
+            raise TypeError(f"Expected session to be a {ServiceSession}, not {type(session)}")
         if not session:
-            session = Session()
+            session = DefaultSession()
 
         # TODO: Add support for 'SAMPLE-AES', 'AES-CTR', 'AES-CBC', 'ClearKey'
         if key.method == "AES-128":
@@ -652,7 +652,7 @@ class HLS:
         return drm
 
     @staticmethod
-    def get_all_drm(keys: list[Union[SessionKey, Key]], session: requests.Session | None = None) -> list[DRM_T]:
+    def get_all_drm(keys: list[Union[SessionKey, Key]], session: ServiceSession | None = None) -> list[DRM_T]:
         """
         Convert HLS EXT-X-KEY data to initialized DRM objects.
 

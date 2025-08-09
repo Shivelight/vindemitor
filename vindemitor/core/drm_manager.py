@@ -8,13 +8,13 @@ import jsonpickle
 from construct import ConstError
 from pywidevine import Device, RemoteCdm
 from pywidevine.cdm import Cdm as WidevineCdm
-from requests import Session
 
 from vindemitor.core.config import config
 from vindemitor.core.constants import AnyTrack
 from vindemitor.core.drm import DRM_T
 from vindemitor.core.drm.widevine import Widevine
 from vindemitor.core.service import Service
+from vindemitor.core.session import ServiceSession
 from vindemitor.core.titles import Title_T
 from vindemitor.core.vaults import Vaults
 
@@ -140,7 +140,7 @@ class DRMManager:
 
         return drm
 
-    def get_session(self) -> Session:
+    def get_session(self) -> ServiceSession:
         """Shortcut to get underlying service session"""
         return self.service.session
 
