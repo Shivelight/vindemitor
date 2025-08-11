@@ -33,7 +33,7 @@ class Vault(metaclass=ABCMeta):
         """Add KID:KEY to the Vault."""
 
     @abstractmethod
-    def add_keys(self, service: str, kid_keys: dict[Union[UUID, str], str]) -> int:
+    def add_keys(self, service: str, kid_keys: dict[UUID | str, str] | dict[str, str]) -> int:
         """
         Add Multiple Content Keys with Key IDs for Service to the Vault.
         Pre-existing Content Keys are ignored/skipped.

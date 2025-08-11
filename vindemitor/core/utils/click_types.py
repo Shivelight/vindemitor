@@ -3,11 +3,18 @@ from typing import Any, Optional, Union
 
 import click
 from click.shell_completion import CompletionItem
-from pywidevine.cdm import Cdm as WidevineCdm
+
+from vindemitor.core.config import LocalCdm, RemoteCdm, ServiceConfig
 
 
 class ContextData:
-    def __init__(self, config: dict, cdm: WidevineCdm | None, proxy_providers: list, profile: Optional[str] = None):
+    def __init__(
+        self,
+        config: ServiceConfig,
+        cdm: LocalCdm | RemoteCdm | None,
+        proxy_providers: list,
+        profile: Optional[str] = None,
+    ):
         self.config = config
         self.cdm = cdm
         self.proxy_providers = proxy_providers

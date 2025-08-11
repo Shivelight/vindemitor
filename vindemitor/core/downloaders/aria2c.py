@@ -130,10 +130,12 @@ def download(
     rpc_uri = f"http://127.0.0.1:{rpc_port}/jsonrpc"
     rpc_session = Session()
 
-    max_concurrent_downloads = int(config.aria2c.get("max_concurrent_downloads", max_workers))
-    max_connection_per_server = int(config.aria2c.get("max_connection_per_server", 1))
-    split = int(config.aria2c.get("split", 5))
-    file_allocation = config.aria2c.get("file_allocation", "prealloc")
+    max_concurrent_downloads = int(
+        config.network.downloader_options.aria2c.get("max_concurrent_downloads", max_workers)
+    )
+    max_connection_per_server = int(config.network.downloader_options.aria2c.get("max_connection_per_server", 1))
+    split = int(config.network.downloader_options.aria2c.get("split", 5))
+    file_allocation = config.network.downloader_options.aria2c.get("file_allocation", "prealloc")
     if len(urls) > 1:
         split = 1
         file_allocation = "none"

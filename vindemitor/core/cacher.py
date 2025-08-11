@@ -42,11 +42,11 @@ class Cacher:
     @property
     def path(self) -> Path:
         """Get the path at which the cache will be read and written."""
-        return (config.directories.cache / self.service_tag / self.key).with_suffix(".json")
+        return (config.paths.directories.cache / self.service_tag / self.key).with_suffix(".json")
 
     @property
     def expired(self) -> bool:
-        return self.expiration and self.expiration < datetime.now()
+        return True if self.expiration and self.expiration < datetime.now() else False
 
     def get(self, key: str, version: int = 1) -> Cacher:
         """

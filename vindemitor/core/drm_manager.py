@@ -5,11 +5,8 @@ from typing import TypeAlias
 from uuid import UUID
 
 import jsonpickle
-from construct import ConstError
-from pywidevine import Device, RemoteCdm
-from pywidevine.cdm import Cdm as WidevineCdm
 
-from vindemitor.core.config import config
+from vindemitor.core.config import CDM_T
 from vindemitor.core.constants import AnyTrack
 from vindemitor.core.drm import DRM_T
 from vindemitor.core.drm.widevine import Widevine
@@ -35,7 +32,7 @@ class DRMManager:
 
     def __init__(
         self,
-        cdm: WidevineCdm | None,
+        cdm: CDM_T | None,
         vaults: Vaults,
         cdm_only: bool,
         vaults_only: bool,
@@ -72,8 +69,8 @@ class DRMManager:
         if not drm or not isinstance(drm, Widevine):
             return
 
-        if not isinstance(self.cdm, WidevineCdm):
-            raise ValueError("CDM is not")
+        if self.cdm and self.cdm.widevine is None:
+            raise ValueError("Widevine CDM is required.")
 
         self.on_pssh_init("Widevine", drm.pssh.dumps())
 
@@ -97,7 +94,7 @@ class DRMManager:
                 from_vaults = drm.content_keys.copy()
                 try:
                     drm.get_content_keys(
-                        cdm=self.cdm,
+                        cdm=self.cdm.widevine,  # pyright: ignore[reportArgumentType, reportOptionalMemberAccess]
                         certificate=lambda challenge: self.service.get_widevine_service_certificate(
                             challenge=challenge, title=self.title, track=track
                         ),
@@ -143,40 +140,3 @@ class DRMManager:
     def get_session(self) -> ServiceSession:
         """Shortcut to get underlying service session"""
         return self.service.session
-
-
-def get_cdm(service: str, profile: str | None = None) -> WidevineCdm | None:
-    """
-    Get CDM for a specified service (either Local or Remote CDM).
-    Raises a ValueError if there's a problem getting a CDM.
-    """
-    cdm_name = config.cdm.get(service) or config.cdm.get("default")
-    if not cdm_name:
-        return None
-
-    if isinstance(cdm_name, dict):
-        if not profile:
-            return None
-        cdm_name = cdm_name.get(profile) or config.cdm.get("default")
-        if not cdm_name:
-            return None
-
-    cdm_api = next(iter(x for x in config.remote_cdm if x["name"] == cdm_name), None)
-    if cdm_api:
-        del cdm_api["name"]
-        return RemoteCdm(**cdm_api)
-
-    cdm_path = config.directories.wvds / f"{cdm_name}.wvd"
-    if not cdm_path.is_file():
-        raise ValueError(f"{cdm_name} does not exist or is not a file")
-
-    try:
-        device = Device.load(cdm_path)
-    except ConstError as e:
-        if "expected 2 but parsed 1" in str(e):
-            raise ValueError(
-                f"{cdm_name}.wvd seems to be a v1 WVD file, use `pywidevine migrate --help` to migrate it to v2."
-            )
-        raise ValueError(f"{cdm_name}.wvd is an invalid or corrupt Widevine Device file, {e}")
-
-    return WidevineCdm.from_device(device)

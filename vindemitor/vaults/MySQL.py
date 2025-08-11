@@ -5,7 +5,7 @@ from uuid import UUID
 import pymysql
 from pymysql.cursors import DictCursor
 
-from vindemitor.core.services import Services
+# from vindemitor.core.services import Services
 from vindemitor.core.vault import Vault
 
 
@@ -109,7 +109,7 @@ class MySQL(Vault):
 
         return True
 
-    def add_keys(self, service: str, kid_keys: dict[Union[UUID, str], str]) -> int:
+    def add_keys(self, service: str, kid_keys: dict[UUID | str, str] | dict[str, str]) -> int:
         for kid, key in kid_keys.items():
             if not key or key.count("0") == len(key):
                 raise ValueError("You cannot add a NULL Content Key to a Vault.")
@@ -153,7 +153,7 @@ class MySQL(Vault):
             cursor.execute("SHOW TABLES")
             for table in cursor.fetchall():
                 # each entry has a key named `Tables_in_<db name>`
-                yield Services.get_tag(list(table.values())[0])
+                yield list(table.values())[0]
         finally:
             cursor.close()
 

@@ -38,7 +38,7 @@ def rotate_log_file(log_path: Path, keep: int = 20) -> Path:
     except ValueError:
         pass
     else:
-        log_path = config.directories.logs / log_path
+        log_path = config.paths.directories.logs / log_path
 
     log_path = log_path.parent / log_path.name.format_map(
         defaultdict(str, name="root", time=datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -64,13 +64,13 @@ def import_module_by_path(path: Path) -> ModuleType:
         raise ValueError("Path does not exist")
 
     # compute package hierarchy for relative import support
-    if path.is_relative_to(config.directories.core_dir):
+    if path.is_relative_to(config.paths.directories.core_dir):
         name = []
         _path = path.parent
-        while _path.stem != config.directories.core_dir.stem:
+        while _path.stem != config.paths.directories.core_dir.stem:
             name.append(_path.stem)
             _path = _path.parent
-        name = ".".join([config.directories.core_dir.stem] + name[::-1])
+        name = ".".join([config.paths.directories.core_dir.stem] + name[::-1])
     else:
         # is outside the src package
         if str(path.parent.parent) not in sys.path:

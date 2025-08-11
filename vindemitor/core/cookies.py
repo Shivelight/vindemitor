@@ -8,9 +8,9 @@ from vindemitor.core.config import config
 
 def get_cookie_path(service: str, profile: Optional[str]) -> Optional[Path]:
     """Get Service Cookie File Path for Profile."""
-    direct_cookie_file = config.directories.cookies / f"{service}.txt"
-    profile_cookie_file = config.directories.cookies / service / f"{profile}.txt"
-    default_cookie_file = config.directories.cookies / service / "default.txt"
+    direct_cookie_file = config.paths.directories.cookies / f"{service}.txt"
+    profile_cookie_file = config.paths.directories.cookies / service / f"{profile}.txt"
+    default_cookie_file = config.paths.directories.cookies / service / "default.txt"
 
     if direct_cookie_file.exists():
         return direct_cookie_file

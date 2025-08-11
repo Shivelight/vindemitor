@@ -1,12 +1,15 @@
 from pathlib import Path
 
 import click
+import tomlkit
 
-from vindemitor.core.config import config
+from vindemitor.core.config import ServiceConfig, config
 from vindemitor.core.service import Service
 from vindemitor.core.utilities import import_module_by_path
 
-_SERVICES = sorted((path for path in config.directories.services.glob("*/__init__.py")), key=lambda x: x.parent.stem)
+_SERVICES = sorted(
+    (path for path in config.paths.directories.services.glob("*/__init__.py")), key=lambda x: x.parent.stem
+)
 
 _MODULES = {path.parent.stem: getattr(import_module_by_path(path), path.parent.stem) for path in _SERVICES}
 
@@ -36,6 +39,7 @@ class Services(click.Group):
             raise click.ClickException(f"{e}. Available Services: {', '.join(available_services)}")
 
         if hasattr(service, "cli"):
+            # ctx.default_map
             return service.cli
 
         raise click.ClickException(f"Service '{tag}' has no 'cli' method configured.")
@@ -70,6 +74,14 @@ class Services(click.Group):
             if value in (tag.lower(), *_ALIASES.get(tag, [])):
                 return tag
         return original_value
+
+    @staticmethod
+    def get_config(name: str) -> ServiceConfig:
+        service_config_path = Services.get_path(name) / config.paths.filenames.config
+        if service_config_path.exists():
+            return ServiceConfig.from_toml(name, config, service_config_path)
+        else:
+            return ServiceConfig(name, config, tomlkit.TOMLDocument())
 
     @staticmethod
     def load(tag: str) -> Service:

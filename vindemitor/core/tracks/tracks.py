@@ -295,7 +295,7 @@ class Tracks:
             "--no-date",  # remove dates from the output for security
         ]
 
-        if config.muxing.get("set_title", True):
+        if config.processors.muxing.get("set_title", True):
             cl.extend(["--title", title])
 
         for i, vt in enumerate(self.videos):
@@ -375,7 +375,7 @@ class Tracks:
             chapters_path = config.directories.temp / config.filenames.chapters.format(
                 title=sanitize_filename(title), random=self.chapters.id
             )
-            self.chapters.dump(chapters_path, fallback_name=config.chapter_fallback_name)
+            self.chapters.dump(chapters_path, fallback_name=config.general.chapter_fallback_name)
             cl.extend(["--chapter-charset", "UTF-8", "--chapters", str(chapters_path)])
         else:
             chapters_path = None

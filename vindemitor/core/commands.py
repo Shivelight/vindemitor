@@ -6,7 +6,8 @@ from vindemitor.core.config import config
 from vindemitor.core.utilities import import_module_by_path
 
 _COMMANDS = sorted(
-    (path for path in config.directories.commands.glob("*.py") if path.stem.lower() != "__init__"), key=lambda x: x.stem
+    (path for path in config.paths.directories.commands.glob("*.py") if path.stem.lower() != "__init__"),
+    key=lambda x: x.stem,
 )
 
 _MODULES = {path.stem: getattr(import_module_by_path(path), path.stem) for path in _COMMANDS}

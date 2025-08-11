@@ -30,16 +30,16 @@ def serve(host: str, port: int, caddy: bool) -> None:
         if not binaries.Caddy:
             raise click.ClickException('Caddy executable "caddy" not found but is required for --caddy.')
         caddy_p = subprocess.Popen(
-            [binaries.Caddy, "run", "--config", str(config.directories.user_configs / "Caddyfile")]
+            [binaries.Caddy, "run", "--config", str(config.paths.directories.user_configs / "Caddyfile")]
         )
     else:
         caddy_p = None
 
     try:
-        if not config.serve.get("devices"):
-            config.serve["devices"] = []
-        config.serve["devices"].extend(list(config.directories.wvds.glob("*.wvd")))
-        serve.run(config.serve, host, port)
+        if not config.drm.serve.get("devices"):
+            config.drm.serve["devices"] = []
+        config.drm.serve["devices"].extend(list(config.paths.directories.wvds.glob("*.wvd")))  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
+        serve.run(config.drm.serve, host, port)
     finally:
         if caddy_p:
             caddy_p.kill()

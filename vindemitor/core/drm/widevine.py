@@ -73,7 +73,7 @@ class Widevine:
         """
         if not session:
             session = DefaultSession()
-            session.headers.update(config.headers)
+            session.headers.update(config.network.session_options.headers)
 
         kid: Optional[UUID] = None
         pssh_boxes: list[Container] = []

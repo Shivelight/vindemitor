@@ -18,6 +18,7 @@ from vindemitor.core.constants import context_settings
 from vindemitor.core.cookies import get_cookie_jar, get_cookie_path, save_cookies
 from vindemitor.core.credential import get_credentials
 from vindemitor.core.proxies import Basic, Hola, NordVPN
+from vindemitor.core.proxies.proxy import Proxy
 from vindemitor.core.service import Service
 from vindemitor.core.services import Services
 from vindemitor.core.utils.click_types import ContextData
@@ -53,26 +54,17 @@ def search(ctx: click.Context, no_proxy: bool, profile: Optional[str] = None, pr
         log.info(f"Using profile: '{profile}'")
 
     with console.status("Loading Service Config...", spinner="dots"):
-        service_config_path = Services.get_path(service) / config.filenames.config
-        service_config: dict
-        if service_config_path.exists():
-            service_config = yaml.safe_load(service_config_path.read_text(encoding="utf8"))
+        service_config = Services.get_config(service)
+        if service_config:
             log.info("Service Config loaded")
-        else:
-            service_config = {}
-        merge_dict(config.services.get(service), service_config)
+        if profile:
+            service_config.set_profile(profile)
 
-    proxy_providers = []
+    proxy_providers: list[Proxy] = config.network.proxies.loaded_providers
     if no_proxy:
         ctx.params["proxy"] = None
     else:
         with console.status("Loading Proxy Providers...", spinner="dots"):
-            if config.proxy_providers.get("basic"):
-                proxy_providers.append(Basic(**config.proxy_providers["basic"]))
-            if config.proxy_providers.get("nordvpn"):
-                proxy_providers.append(NordVPN(**config.proxy_providers["nordvpn"]))
-            if binaries.HolaProxy:
-                proxy_providers.append(Hola())
             for proxy_provider in proxy_providers:
                 log.info(f"Loaded {proxy_provider.__class__.__name__}: {proxy_provider}")
 

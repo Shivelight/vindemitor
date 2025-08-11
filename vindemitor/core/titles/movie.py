@@ -113,8 +113,8 @@ class Movie(Title):
                 name += " HFR"
             name += f" {VIDEO_CODEC_MAP.get(codec, codec)}"
 
-        if config.tag:
-            name += f"-{config.tag}"
+        if config.general.tag:
+            name += f"-{config.general.tag}"
 
         return sanitize_filename(name)
 

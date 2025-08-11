@@ -113,7 +113,7 @@ class API(Vault):
 
         return added or updated
 
-    def add_keys(self, service: str, kid_keys: dict[Union[UUID, str], str]) -> int:
+    def add_keys(self, service: str, kid_keys: dict[UUID | str, str] | dict[str, str]) -> int:
         data = self.session.post(
             url=f"{self.uri}/{service.lower()}",
             json={"content_keys": {str(kid).replace("-", ""): key for kid, key in kid_keys.items()}},

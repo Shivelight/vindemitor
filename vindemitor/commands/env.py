@@ -44,10 +44,10 @@ def info() -> None:
         if sys.platform == "win32" and os.getenv(x)
     }
 
-    for name in sorted(dir(config.directories)):
+    for name in sorted(dir(config.paths.directories)):
         if name.startswith("__") or name == "app_dirs":
             continue
-        path = getattr(config.directories, name).resolve()
+        path = getattr(config.paths.directories, name).resolve()
         for var, var_path in path_vars.items():
             if path.is_relative_to(var_path):
                 path = rf"%{var}%\{path.relative_to(var_path)}"
@@ -67,7 +67,7 @@ def clear() -> None:
 def cache(service: Optional[str]) -> None:
     """Clear the environment cache directory."""
     log = logging.getLogger("env")
-    cache_dir = config.directories.cache
+    cache_dir = config.paths.directories.cache
     if service:
         cache_dir = cache_dir / Services.get_tag(service)
     log.info(f"Clearing cache directory: {cache_dir}")
@@ -84,11 +84,11 @@ def cache(service: Optional[str]) -> None:
 def temp() -> None:
     """Clear the environment temp directory."""
     log = logging.getLogger("env")
-    log.info(f"Clearing temp directory: {config.directories.temp}")
-    files_count = len(list(config.directories.temp.glob("**/*")))
+    log.info(f"Clearing temp directory: {config.paths.directories.temp}")
+    files_count = len(list(config.paths.directories.temp.glob("**/*")))
     if not files_count:
         log.info("No files to delete")
     else:
         log.info(f"Deleting {files_count} files...")
-        shutil.rmtree(config.directories.temp)
+        shutil.rmtree(config.paths.directories.temp)
         log.info("Cleared")

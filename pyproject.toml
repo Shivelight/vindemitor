@@ -54,6 +54,7 @@ dependencies = [
   "sortedcontainers>=2.4.0,<3",
   "subtitle-filter>=1.5.0,<2",
   "urllib3>=2.5.0,<3",
+  "tomlkit>=0.13.3",
 ]
 
 [project.urls]

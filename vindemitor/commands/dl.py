@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 import click
-import yaml
 from pymediainfo import MediaInfo
 from rich.console import Group
 from rich.live import Live
@@ -26,26 +25,23 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from vindemitor.core import binaries
-from vindemitor.core.config import config
+from vindemitor.core.config import LocalCdm, config
 from vindemitor.core.console import console
 from vindemitor.core.constants import DOWNLOAD_LICENCE_ONLY, context_settings
 from vindemitor.core.cookies import get_cookie_jar, get_cookie_path, save_cookies
 from vindemitor.core.credential import get_credentials
-from vindemitor.core.drm_manager import DRMManager, get_cdm
+from vindemitor.core.drm_manager import DRMManager
 from vindemitor.core.events import events
 from vindemitor.core.post_processor import PostProcessor
-from vindemitor.core.proxies import Basic, Hola, NordVPN
 from vindemitor.core.proxies.proxy import Proxy
 from vindemitor.core.service import Service
 from vindemitor.core.services import Services
-from vindemitor.core.titles import Movie, Song
+from vindemitor.core.titles import Movie, Song, Title_T
 from vindemitor.core.titles.episode import Episode
 from vindemitor.core.track_selector import TrackSelector
 from vindemitor.core.tracks import Audio, Subtitle, Tracks, Video
 from vindemitor.core.utilities import is_close_match, time_elapsed_since
 from vindemitor.core.utils.click_types import LANGUAGE_RANGE, QUALITY_LIST, SEASON_RANGE, ContextData, MultipleChoice
-from vindemitor.core.utils.collections import merge_dict
 from vindemitor.core.vaults import Vaults
 
 
@@ -53,10 +49,16 @@ class dl:
     @click.command(
         short_help="Download, Decrypt, and Mux tracks for titles from a Service.",
         cls=Services,
-        context_settings=dict(**context_settings, default_map=config.dl, token_normalize_func=Services.get_tag),
+        context_settings=dict(
+            **context_settings, default_map=config.default_map.dl, token_normalize_func=Services.get_tag
+        ),
     )
     @click.option(
-        "-p", "--profile", type=str, default=None, help="Profile to use for Credentials and Cookies (if available)."
+        "-p",
+        "--profile",
+        type=str,
+        default=None,
+        help="Profile to use for Credentials and Cookies (if available).",
     )
     @click.option(
         "-q",
@@ -203,7 +205,7 @@ class dl:
         if not ctx.invoked_subcommand:
             raise ValueError("A subcommand to invoke was not specified, the main code cannot continue.")
 
-        self.log = logging.getLogger("download")
+        self.log: logging.Logger = logging.getLogger("download")
 
         self.service = Services.get_tag(ctx.invoked_subcommand)
         self.profile = profile
@@ -212,44 +214,33 @@ class dl:
             self.log.info(f"Using profile: '{self.profile}'")
 
         with console.status("Loading Service Config...", spinner="dots"):
-            service_config_path = Services.get_path(self.service) / config.filenames.config
-            if service_config_path.exists():
-                self.service_config = yaml.safe_load(service_config_path.read_text(encoding="utf8"))
+            self.service_config = Services.get_config(self.service)
+            if self.service_config:
                 self.log.info("Service Config loaded")
-            else:
-                self.service_config = {}
-            merge_dict(config.services.get(self.service), self.service_config)
+            if self.profile:
+                self.service_config.set_profile(self.profile)
 
         with console.status("Loading Widevine CDM...", spinner="dots"):
             try:
-                self.cdm = get_cdm(self.service, self.profile)
+                self.cdm = self.service_config.cdm
             except ValueError as e:
                 self.log.error(f"Failed to load Widevine CDM, {e}")
                 sys.exit(1)
             if self.cdm:
-                self.log.info(
-                    f"Loaded {self.cdm.__class__.__name__} Widevine CDM: {self.cdm.system_id} (L{self.cdm.security_level})"
-                )
+                if isinstance(self.cdm, LocalCdm) and self.cdm.widevine:
+                    self.log.info(
+                        f"Loaded Widevine CDM: {self.cdm.widevine.system_id} (L{self.cdm.widevine.security_level})"
+                    )
 
         with console.status("Loading Key Vaults...", spinner="dots"):
             self.vaults = Vaults(self.service)
-            for vault in config.key_vaults:
-                vault_type = vault["type"]
-                del vault["type"]
-                self.vaults.load(vault_type, **vault)
             self.log.info(f"Loaded {len(self.vaults)} Vaults")
 
-        self.proxy_providers: list[Proxy] = []
+        self.proxy_providers: list[Proxy] = config.network.proxies.loaded_providers
         if no_proxy:
             ctx.params["proxy"] = None
         else:
             with console.status("Loading Proxy Providers...", spinner="dots"):
-                if config.proxy_providers.get("basic"):
-                    self.proxy_providers.append(Basic(**config.proxy_providers["basic"]))
-                if config.proxy_providers.get("nordvpn"):
-                    self.proxy_providers.append(NordVPN(**config.proxy_providers["nordvpn"]))
-                if binaries.HolaProxy:
-                    self.proxy_providers.append(Hola())
                 for proxy_provider in self.proxy_providers:
                     self.log.info(f"Loaded {proxy_provider.__class__.__name__}: {proxy_provider}")
 
@@ -290,7 +281,7 @@ class dl:
         )
 
         if tag:
-            config.tag = tag
+            config.general.tag = tag
 
         # needs to be added this way instead of @cli.result_callback to be
         # able to keep `self` as the first positional
@@ -331,23 +322,6 @@ class dl:
     ) -> None:
         start_time = time.time()
 
-        self.track_selector = TrackSelector(
-            quality=quality,
-            vcodec=vcodec,
-            acodec=acodec,
-            vbitrate=vbitrate,
-            abitrate=abitrate,
-            range_=range_,
-            channels=channels,
-            lang=lang,
-            v_lang=v_lang,
-            s_lang=s_lang,
-            video_only=video_only,
-            audio_only=audio_only,
-            subs_only=subs_only,
-            chapters_only=chapters_only,
-        )
-
         if cdm_only is None:
             cdm_only = False
             vaults_only = False
@@ -373,6 +347,7 @@ class dl:
         if list_titles:
             return
 
+        title: Title_T
         for i, title in enumerate(titles):
             if isinstance(title, Episode) and wanted and f"{title.season}x{title.number}" not in wanted:
                 continue
@@ -422,6 +397,23 @@ class dl:
                 available_tracks, _ = title.tracks.tree()
                 console.print(Padding(Panel(available_tracks, title="Available Tracks"), (0, 5)))
                 continue
+
+            self.track_selector = TrackSelector(
+                quality=quality,
+                vcodec=vcodec,
+                acodec=acodec,
+                vbitrate=vbitrate,
+                abitrate=abitrate,
+                range_=range_,
+                channels=channels,
+                lang=lang,
+                v_lang=v_lang,
+                s_lang=s_lang,
+                video_only=video_only,
+                audio_only=audio_only,
+                subs_only=subs_only,
+                chapters_only=chapters_only,
+            )
 
             with console.status("Selecting tracks...", spinner="dots"):
                 title.tracks = self.track_selector.select(title)
@@ -566,7 +558,7 @@ class dl:
 
                 for muxed_path in muxed_paths:
                     media_info = MediaInfo.parse(muxed_path)
-                    final_dir = config.directories.downloads
+                    final_dir = config.paths.directories.downloads
                     final_filename = title.get_filename(media_info, show_service=not no_source)
 
                     if not no_folder and isinstance(title, (Episode, Song)):

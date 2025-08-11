@@ -107,8 +107,8 @@ class Song(Title):
         if "JOC" in features:
             name += " Atmos"
 
-        if config.tag:
-            name += f"-{config.tag}"
+        if config.general.tag:
+            name += f"-{config.general.tag}"
 
         return sanitize_filename(name, " ")
 

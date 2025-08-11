@@ -94,7 +94,7 @@ class Service(metaclass=ABCMeta):
         :returns: Prepared Python-requests Session
         """
         session = requests.Session()
-        session.headers.update(config.headers)
+        session.headers.update(config.network.session_options.headers)
         session.mount(
             "https://",
             HTTPAdapter(

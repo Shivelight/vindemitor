@@ -2,10 +2,10 @@ import logging
 import re
 from pathlib import Path
 from typing import Optional
+from uuid import UUID
 
 import click
 
-from vindemitor.core.config import config
 from vindemitor.core.constants import context_settings
 from vindemitor.core.services import Services
 from vindemitor.core.vault import Vault
@@ -21,7 +21,7 @@ def kv() -> None:
 @click.argument("to_vault", type=str)
 @click.argument("from_vaults", nargs=-1, type=click.UNPROCESSED)
 @click.option("-s", "--service", type=str, default=None, help="Only copy data to and from a specific service.")
-def copy(to_vault: str, from_vaults: list[str], service: Optional[str] = None) -> None:
+def copy(to_vault: str, from_vaults: list[str], service: Optional[str] = None) -> None:  # pyright: ignore[reportRedeclaration]
     """
     Copy data from multiple Key Vaults into a single Key Vault.
     Rows with matching KIDs are skipped unless there's no KEY set.
@@ -40,13 +40,9 @@ def copy(to_vault: str, from_vaults: list[str], service: Optional[str] = None) -
 
     vaults = Vaults()
     for vault_name in [to_vault] + list(from_vaults):
-        vault = next((x for x in config.key_vaults if x["name"] == vault_name), None)
+        vault = next((x for x in vaults.vaults if x.name == vault_name), None)
         if not vault:
             raise click.ClickException(f"Vault ({vault_name}) is not defined in the config.")
-        vault_type = vault["type"]
-        vault_args = vault.copy()
-        del vault_args["type"]
-        vaults.load(vault_type, **vault_args)
 
     to_vault: Vault = vaults.vaults[0]
     from_vaults: list[Vault] = vaults.vaults[1:]
@@ -64,6 +60,7 @@ def copy(to_vault: str, from_vaults: list[str], service: Optional[str] = None) -
             services = from_vault.get_services()
 
         for service_ in services:
+            service_ = Services.get_tag(service_)
             log.info(f"Getting data from {from_vault} for {service_}")
             content_keys = list(from_vault.get_keys(service_))  # important as it's a generator we iterate twice
 
@@ -136,16 +133,12 @@ def add(file: Path, service: str, vaults: list[str]) -> None:
 
     vaults_ = Vaults()
     for vault_name in vaults:
-        vault = next((x for x in config.key_vaults if x["name"] == vault_name), None)
+        vault = next((x for x in vaults_.vaults if x.name == vault_name), None)
         if not vault:
             raise click.ClickException(f"Vault ({vault_name}) is not defined in the config.")
-        vault_type = vault["type"]
-        vault_args = vault.copy()
-        del vault_args["type"]
-        vaults_.load(vault_type, **vault_args)
 
     data = file.read_text(encoding="utf8")
-    kid_keys: dict[str, str] = {}
+    kid_keys: dict[str | UUID, str] = {}
     for line in data.splitlines(keepends=False):
         line = line.strip()
         match = re.search(r"^(?P<kid>[0-9a-fA-F]{32}):(?P<key>[0-9a-fA-F]{32})$", line)
@@ -174,22 +167,18 @@ def prepare(vaults: list[str]) -> None:
 
     vaults_ = Vaults()
     for vault_name in vaults:
-        vault = next((x for x in config.key_vaults if x["name"] == vault_name), None)
+        vault = next((x for x in vaults_.vaults if x.name == vault_name), None)
         if not vault:
             raise click.ClickException(f"Vault ({vault_name}) is not defined in the config.")
-        vault_type = vault["type"]
-        vault_args = vault.copy()
-        del vault_args["type"]
-        vaults_.load(vault_type, **vault_args)
 
     for vault in vaults_:
         if hasattr(vault, "has_table") and hasattr(vault, "create_table"):
             for service_tag in Services.get_tags():
-                if vault.has_table(service_tag):
+                if vault.has_table(service_tag):  # pyright: ignore[reportAttributeAccessIssue]
                     log.info(f"{vault} already has a {service_tag} Table")
                 else:
                     try:
-                        vault.create_table(service_tag, commit=True)
+                        vault.create_table(service_tag, commit=True)  # pyright: ignore[reportAttributeAccessIssue]
                         log.info(f"{vault}: Created {service_tag} Table")
                     except PermissionError:
                         log.error(f"{vault} user has no create table permission, skipping...")

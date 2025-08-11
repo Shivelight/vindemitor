@@ -91,7 +91,11 @@ class Credential:
 
 def get_credentials(service: str, profile: Optional[str]) -> Optional[Credential]:
     """Get Service Credentials for Profile."""
-    credentials = config.credentials.get(service)
+    service_conf = config.services.get(service, {})
+    if profile:
+        credentials = service_conf.get("credential")
+    else:
+        credentials = service_conf.get("profiles", {}).get(profile, {}).get("credential")
     if credentials:
         if isinstance(credentials, dict):
             if profile:

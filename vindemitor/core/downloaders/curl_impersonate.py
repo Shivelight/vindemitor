@@ -17,7 +17,7 @@ MAX_ATTEMPTS = 5
 RETRY_WAIT = 2
 CHUNK_SIZE = 1024
 PROGRESS_WINDOW = 5
-BROWSER = config.curl_impersonate.get("browser", "chrome124")
+BROWSER = config.network.downloader_options.curl_impersonate.get("browser", "chrome124")
 
 
 def download(url: str, save_path: Path, session: Session, **kwargs: Any) -> Generator[dict[str, Any], None, None]:

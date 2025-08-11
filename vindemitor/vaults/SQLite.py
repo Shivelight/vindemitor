@@ -5,7 +5,7 @@ from sqlite3 import Connection
 from typing import Iterator, Optional, Union
 from uuid import UUID
 
-from vindemitor.core.services import Services
+# from vindemitor.core.services import Services
 from vindemitor.core.vault import Vault
 
 
@@ -86,7 +86,7 @@ class SQLite(Vault):
 
         return True
 
-    def add_keys(self, service: str, kid_keys: dict[Union[UUID, str], str]) -> int:
+    def add_keys(self, service: str, kid_keys: dict[UUID | str, str] | dict[str, str]) -> int:
         for kid, key in kid_keys.items():
             if not key or key.count("0") == len(key):
                 raise ValueError("You cannot add a NULL Content Key to a Vault.")
@@ -124,7 +124,7 @@ class SQLite(Vault):
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
             for (name,) in cursor.fetchall():
                 if name != "sqlite_sequence":
-                    yield Services.get_tag(name)
+                    yield name
         finally:
             cursor.close()
 

@@ -84,7 +84,7 @@ class Track:
 
         if downloader is None:
             downloader = {"aria2c": aria2c, "curl_impersonate": curl_impersonate, "requests": requests}[
-                config.downloader
+                config.network.downloader
             ]
 
         self.path: Optional[Path] = None

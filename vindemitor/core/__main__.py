@@ -27,7 +27,7 @@ LOGGING_PATH = None
     "--log",
     "log_path",
     type=Path,
-    default=config.directories.logs / config.filenames.log,
+    default=config.paths.directories.logs / config.paths.filenames.log,
     help="Log path (or filename). Path can contain the following f-string args: {name} {time}.",
 )
 def main(version: bool, debug: bool, log_path: Path) -> None:
@@ -91,7 +91,7 @@ def main(version: bool, debug: bool, log_path: Path) -> None:
 def save_log():
     if console.record and LOGGING_PATH:
         # TODO: Currently semi-bust. Everything that refreshes gets duplicated.
-        console.save_text(LOGGING_PATH)
+        console.save_text(LOGGING_PATH)  # type: ignore[reportArgumentType]
 
 
 if __name__ == "__main__":

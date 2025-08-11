@@ -29,7 +29,7 @@ def add(paths: list[Path]) -> None:
     """Add one or more WVD (Widevine Device) files to the WVDs Directory."""
     log = logging.getLogger("wvd")
     for path in paths:
-        dst_path = config.directories.wvds / path.name
+        dst_path = config.paths.directories.wvds / path.name
 
         if not path.exists():
             log.error(f"The WVD path '{path}' does not exist...")
@@ -49,7 +49,7 @@ def delete(names: list[str]) -> None:
     """Delete one or more WVD (Widevine Device) files from the WVDs Directory."""
     log = logging.getLogger("wvd")
     for name in names:
-        path = (config.directories.wvds / name).with_suffix(".wvd")
+        path = (config.paths.directories.wvds / name).with_suffix(".wvd")
         if not path.exists():
             log.error(f"No WVD file exists by the name '{name}'...")
             continue
@@ -80,7 +80,7 @@ def parse(path: Path) -> None:
     except ValueError:
         named = False
     if named:
-        path = config.directories.wvds / f"{path.name}.wvd"
+        path = config.paths.directories.wvds / f"{path.name}.wvd"
 
     log = logging.getLogger("wvd")
 
@@ -123,11 +123,13 @@ def dump(wvd_paths: list[Path], out_dir: Path) -> None:
     log = logging.getLogger("wvd")
 
     if wvd_paths == ():
-        if not config.directories.wvds.exists():
-            console.log(f"[bright_blue]{config.directories.wvds.absolute()}[/] does not exist...")
-        wvd_paths = list(x for x in config.directories.wvds.iterdir() if x.is_file() and x.suffix.lower() == ".wvd")
+        if not config.paths.directories.wvds.exists():
+            console.log(f"[bright_blue]{config.paths.directories.wvds.absolute()}[/] does not exist...")
+        wvd_paths = list(
+            x for x in config.paths.directories.wvds.iterdir() if x.is_file() and x.suffix.lower() == ".wvd"
+        )
         if not wvd_paths:
-            console.log(f"[bright_blue]{config.directories.wvds.absolute()}[/] is empty...")
+            console.log(f"[bright_blue]{config.paths.directories.wvds.absolute()}[/] is empty...")
 
     for i, (wvd_path, out_path) in enumerate(zip(wvd_paths, (out_dir / x.stem for x in wvd_paths))):
         if i > 0:
@@ -138,7 +140,7 @@ def dump(wvd_paths: list[Path], out_dir: Path) -> None:
         except ValueError:
             named = False
         if named:
-            wvd_path = config.directories.wvds / f"{wvd_path.stem}.wvd"
+            wvd_path = config.paths.directories.wvds / f"{wvd_path.stem}.wvd"
         out_path.mkdir(parents=True, exist_ok=True)
 
         log.info(f"Dumping: {wvd_path}")
@@ -244,7 +246,7 @@ def new(
     if file_hashes:
         device.client_id.vmp_data = file_hashes.read_bytes()
 
-    out_path = (output or config.directories.wvds) / f"{name}_{device.system_id}_l{device.security_level}.wvd"
+    out_path = (output or config.paths.directories.wvds) / f"{name}_{device.system_id}_l{device.security_level}.wvd"
     device.dump(out_path)
 
     log = logging.getLogger("wvd")
