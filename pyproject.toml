@@ -109,6 +109,9 @@ explicit_package_bases = true
 allow_redefinition_new = true
 local_partial_types = true
 
+[tool.basedpyright]
+typeCheckingMode = "standard"  # TODO: promote to "strict" / "recommended" when have time
+
 [tool.ruff]
 force-exclude = true
 line-length = 120
