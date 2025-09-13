@@ -314,7 +314,6 @@ class ServiceConfig:
         return cls(name, root_config, doc)
 
 
-# noinspection PyProtectedMember
 POSSIBLE_CONFIG_PATHS = (
     # The Devine Namespace Folder (e.g., %appdata%/Python/Python311/site-packages/vindemitor)
     Paths.Directories.namespace_dir / Paths.Filenames.root_config,
