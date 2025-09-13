@@ -1,0 +1,5 @@
+{
+  "python.languageServer": "None",
+  "python.analysis.typeCheckingMode": "off",
+  "basedpyright.analysis.diagnosticMode": "workspace"
+}
