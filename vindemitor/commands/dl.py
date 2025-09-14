@@ -4,7 +4,6 @@ import logging
 import random
 import re
 import shutil
-import subprocess
 import sys
 import time
 from concurrent import futures
@@ -502,9 +501,8 @@ class dl:
                     if hasattr(e, "returncode"):
                         error_messages.append(f"   Binary call failed, Process exit code: {e.returncode}")
                     error_messages.append("   See the error trace above for more information.")
-                    if isinstance(e, subprocess.CalledProcessError):
-                        # CalledProcessError already lists the exception trace
-                        console.print_exception()
+
+                console.print_exception()
                 console.print(Padding(Group(*error_messages), (1, 5)))
                 return
 
