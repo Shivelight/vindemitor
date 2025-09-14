@@ -290,15 +290,13 @@ class HLS:
 
         segment_save_dir = save_dir / "segments"
 
-        proxy = next(iter(session.proxies.values()), None)
-
         for status_update in downloader(
             urls=urls,
             output_dir=segment_save_dir,
             filename="{i:0%d}{ext}" % len(str(len(urls))),
             headers=session.headers,
             cookies=session.cookies,
-            proxy=proxy,
+            proxy=session.proxy,
             max_workers=max_workers,
         ):
             file_downloaded = status_update.get("file_downloaded")

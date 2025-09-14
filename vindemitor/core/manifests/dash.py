@@ -468,8 +468,6 @@ class DASH:
             downloader = requests_downloader
             log.warning("Falling back to the requests downloader as aria2(c) doesn't support the Range header")
 
-        proxy = next(iter(session.proxies.values()), None)
-
         for status_update in downloader(
             urls=[
                 {"url": url, "headers": {"Range": f"bytes={bytes_range}"} if bytes_range else {}}
@@ -479,7 +477,7 @@ class DASH:
             filename="{i:0%d}.mp4" % (len(str(len(segments)))),
             headers=session.headers,
             cookies=session.cookies,
-            proxy=proxy,
+            proxy=session.proxy,
             max_workers=max_workers,
         ):
             file_downloaded = status_update.get("file_downloaded")

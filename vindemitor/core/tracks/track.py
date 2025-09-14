@@ -268,14 +268,13 @@ class Track:
                     if DOWNLOAD_LICENCE_ONLY.is_set():
                         progress(downloaded="[yellow]SKIPPED")
                     else:
-                        proxy = next(iter(session.proxies.values()), None)
                         for status_update in self.downloader(
                             urls=self.url,
                             output_dir=save_path.parent,
                             filename=save_path.name,
                             headers=session.headers,
                             cookies=session.cookies,
-                            proxy=proxy,
+                            proxy=session.proxy,
                             max_workers=max_workers,
                         ):
                             file_downloaded = status_update.get("file_downloaded")

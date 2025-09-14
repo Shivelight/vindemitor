@@ -70,7 +70,7 @@ class Service(metaclass=ABCMeta):
                         self.log.info("Service has no Geofence")
 
             if proxy:
-                self.session.proxies.update({"all": proxy})
+                self.session.proxy = proxy
                 proxy_parse = urlparse(proxy)
                 if proxy_parse.username and proxy_parse.password:
                     self.session.headers.update(

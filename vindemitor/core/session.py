@@ -2,9 +2,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+import httpcore
 import httpx
 import requests
 import requests.cookies
+from httpx._utils import URLPattern
 
 
 class ServiceSession(ABC):
@@ -58,13 +60,13 @@ class ServiceSession(ABC):
 
     @property
     @abstractmethod
-    def proxies(self) -> dict[str, str]:
+    def proxy(self) -> str | None:
         """Get the session proxies."""
         raise NotImplementedError
 
-    @proxies.setter
+    @proxy.setter
     @abstractmethod
-    def proxies(self, proxies: dict[str, str]) -> None:
+    def proxy(self, proxy: str) -> None:
         """Set the session proxies."""
         raise NotImplementedError
 
@@ -104,12 +106,12 @@ class RequestsSession(ServiceSession):
         self.session.headers = headers
 
     @property
-    def proxies(self) -> dict[str, str]:
-        return dict(self.session.proxies)
+    def proxy(self) -> str | None:
+        return self.session.proxies["all"]
 
-    @proxies.setter
-    def proxies(self, proxies: dict[str, str]) -> None:
-        self.session.proxies.update(proxies)
+    @proxy.setter
+    def proxy(self, proxy: str) -> None:
+        self.session.proxies.update({"all": proxy})
 
 
 class HTTPXSession(ServiceSession):
@@ -150,12 +152,18 @@ class HTTPXSession(ServiceSession):
         self.session.headers = headers
 
     @property
-    def proxies(self) -> dict[str, str]:
-        raise NotImplementedError
+    def proxy(self) -> str | None:
+        if mount := self.session._mounts.get(URLPattern("all://")):
+            if isinstance(mount, httpx.HTTPTransport) and isinstance(mount._pool, httpcore.HTTPProxy):
+                proxy_url = mount._pool._proxy_url
+                if proxy_url.port is None:
+                    return f"{proxy_url.scheme}://{proxy_url.host}{proxy_url.target}"
+                return f"{proxy_url.scheme}://{proxy_url.host}:{proxy_url.port}{proxy_url.target}"
 
-    @proxies.setter
-    def proxies(self, proxies: dict[str, str]) -> None:
-        raise NotImplementedError
+    @proxy.setter
+    def proxy(self, proxy: str) -> None:
+        new_proxy_transport = self.session._init_proxy_transport(httpx.Proxy(proxy))
+        self.session._mounts.update({URLPattern("all://"): new_proxy_transport})
 
 
 DefaultSession = RequestsSession
