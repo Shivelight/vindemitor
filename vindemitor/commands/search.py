@@ -139,7 +139,7 @@ def result(service: Service, profile: Optional[str] = None, **_: Any) -> None:
     # update cookies
     cookie_file = get_cookie_path(service_tag, profile)
     if cookie_file:
-        save_cookies(cookie_file, service.session.cookies)
+        save_cookies(cookie_file, service.session.cookiejar)
 
     console.print(Padding(Rule(f"[rule.text]{len(search_results.children)} Search Results"), (1, 2)))
 

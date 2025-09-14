@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping
+from http.cookiejar import CookieJar
 from typing import Any
 
 import httpcore
 import httpx
 import requests
-import requests.cookies
 from httpx._utils import URLPattern
 
 
@@ -36,14 +36,23 @@ class ServiceSession(ABC):
 
     @property
     @abstractmethod
-    def cookies(self) -> Any:
+    def cookies(self) -> MutableMapping:
         """Get the session cookies."""
         raise NotImplementedError
 
     @cookies.setter
     @abstractmethod
-    def cookies(self, cookies: Any) -> None:
+    def cookies(self, cookies: MutableMapping | CookieJar) -> None:
         """Set the session cookies."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def cookiejar(self) -> CookieJar:
+        """Get session underlying CookieJar.
+
+        This meant to be used internally. Using this directly on services code is discouraged.
+        """
         raise NotImplementedError
 
     @property
@@ -87,15 +96,19 @@ class RequestsSession(ServiceSession):
         self.session.close()
 
     @property
-    def cookies(self) -> requests.cookies.RequestsCookieJar:
+    def cookies(self) -> MutableMapping:
         return self.session.cookies
 
     @cookies.setter
-    def cookies(self, cookies: dict[str, str] | requests.cookies.RequestsCookieJar) -> None:
-        if isinstance(cookies, dict):
+    def cookies(self, cookies: MutableMapping | CookieJar) -> None:
+        if isinstance(cookies, MutableMapping):
             self.session.cookies.update(cookies)
         else:
-            self.session.cookies = cookies
+            self.session.cookies = cookies  # pyright: ignore[reportAttributeAccessIssue]
+
+    @property
+    def cookiejar(self) -> CookieJar:
+        return self.session.cookies
 
     @property
     def headers(self) -> MutableMapping:
@@ -137,11 +150,15 @@ class HTTPXSession(ServiceSession):
         return self.session.cookies
 
     @cookies.setter
-    def cookies(self, cookies: dict[str, str] | httpx.Cookies) -> None:
-        if isinstance(cookies, dict):
-            self.session.cookies.update(cookies)
+    def cookies(self, cookies: MutableMapping | CookieJar) -> None:
+        if isinstance(cookies, MutableMapping):
+            self.session.cookies.update(cookies)  # pyright: ignore[reportArgumentType]
         else:
-            self.session.cookies = cookies
+            self.session.cookies.jar = cookies
+
+    @property
+    def cookiejar(self) -> CookieJar:
+        return self.session.cookies.jar
 
     @property
     def headers(self) -> MutableMapping:

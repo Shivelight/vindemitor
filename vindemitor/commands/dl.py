@@ -586,7 +586,7 @@ class dl:
             # update cookies
             cookie_file = get_cookie_path(self.service, self.profile)
             if cookie_file:
-                save_cookies(cookie_file, service.session.cookies)
+                save_cookies(cookie_file, service.session.cookiejar)
 
         dl_time = time_elapsed_since(start_time)
 
