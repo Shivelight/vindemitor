@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 import httpx
 import requests
+import requests.cookies
 
 
 class ServiceSession(ABC):
@@ -45,13 +46,13 @@ class ServiceSession(ABC):
 
     @property
     @abstractmethod
-    def headers(self) -> dict:
+    def headers(self) -> MutableMapping:
         """Get the session headers."""
         raise NotImplementedError
 
     @headers.setter
     @abstractmethod
-    def headers(self, headers: dict) -> None:
+    def headers(self, headers: MutableMapping) -> None:
         """Set the session headers."""
         raise NotImplementedError
 
@@ -95,12 +96,12 @@ class RequestsSession(ServiceSession):
             self.session.cookies = cookies
 
     @property
-    def headers(self) -> dict[str, str]:
+    def headers(self) -> MutableMapping:
         return self.session.headers
 
     @headers.setter
-    def headers(self, headers: dict[str, str]) -> None:
-        self.session.headers.update(headers)
+    def headers(self, headers: MutableMapping) -> None:
+        self.session.headers = headers
 
     @property
     def proxies(self) -> dict[str, str]:
@@ -141,12 +142,12 @@ class HTTPXSession(ServiceSession):
             self.session.cookies = cookies
 
     @property
-    def headers(self) -> dict[str, str]:
-        return dict(self.session.headers)
+    def headers(self) -> MutableMapping:
+        return self.session.headers
 
     @headers.setter
-    def headers(self, headers: dict[str, str]) -> None:
-        self.session.headers.update(headers)
+    def headers(self, headers: MutableMapping) -> None:
+        self.session.headers = headers
 
     @property
     def proxies(self) -> dict[str, str]:
