@@ -476,7 +476,7 @@ class DASH:
             output_dir=save_dir,
             filename="{i:0%d}.mp4" % (len(str(len(segments)))),
             headers=session.headers,
-            cookies=session.cookies,
+            cookies=session.cookiejar,
             proxy=session.proxy,
             max_workers=max_workers,
         ):

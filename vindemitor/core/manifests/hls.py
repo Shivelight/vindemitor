@@ -295,7 +295,7 @@ class HLS:
             output_dir=segment_save_dir,
             filename="{i:0%d}{ext}" % len(str(len(urls))),
             headers=session.headers,
-            cookies=session.cookies,
+            cookies=session.cookiejar,
             proxy=session.proxy,
             max_workers=max_workers,
         ):

@@ -273,7 +273,7 @@ class Track:
                             output_dir=save_path.parent,
                             filename=save_path.name,
                             headers=session.headers,
-                            cookies=session.cookies,
+                            cookies=session.cookiejar,
                             proxy=session.proxy,
                             max_workers=max_workers,
                         ):
