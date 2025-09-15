@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping
 from http.cookiejar import CookieJar
@@ -130,6 +131,9 @@ class RequestsSession(ServiceSession):
 
 class HTTPXSession(ServiceSession):
     """Session implementation using HTTPX library."""
+
+    _httpx_logger = logging.getLogger("httpx")
+    _httpx_logger.setLevel(logging.WARNING)
 
     def __init__(self, session: httpx.Client | None = None) -> None:
         self.session: httpx.Client = session or httpx.Client()
