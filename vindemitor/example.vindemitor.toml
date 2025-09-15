@@ -18,6 +18,9 @@ chapter_fallback_name = "Chapter {i:02}"
 # Set a background color for the terminal output.
 set_terminal_bg = true
 
+# Set preferred decryptor. Value is either "shaka" or "mp4decrypt". Defaults to "shaka".
+decryptor = "shaka"
+
 # -----------------------------------------------------------------------------
 # [ 2 ] Network & Connection Settings
 # -----------------------------------------------------------------------------
