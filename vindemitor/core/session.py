@@ -7,6 +7,7 @@ import httpcore
 import httpx
 import requests
 from httpx._utils import URLPattern
+from requests.cookies import RequestsCookieJar
 
 
 class ServiceSession(ABC):
@@ -96,7 +97,7 @@ class RequestsSession(ServiceSession):
         self.session.close()
 
     @property
-    def cookies(self) -> MutableMapping:
+    def cookies(self) -> RequestsCookieJar:
         return self.session.cookies
 
     @cookies.setter
