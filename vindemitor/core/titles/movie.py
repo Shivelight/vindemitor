@@ -19,6 +19,7 @@ class Movie(Title):
         service: type,
         name: str,
         year: Optional[Union[int, str]] = None,
+        description: Optional[str] = None,
         language: Optional[Union[str, Language]] = None,
         data: Optional[Any] = None,
     ) -> None:
@@ -42,6 +43,7 @@ class Movie(Title):
 
         self.name = name
         self.year = year
+        self.description = description
 
     def __str__(self) -> str:
         if self.year:

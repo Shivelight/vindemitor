@@ -24,6 +24,7 @@ class Episode(Title):
         number: Union[int, str],
         name: Optional[str] = None,
         year: Optional[Union[int, str]] = None,
+        description: Optional[str] = None,
         language: Optional[Union[str, Language]] = None,
         data: Optional[Any] = None,
     ) -> None:
@@ -75,6 +76,7 @@ class Episode(Title):
         self.number = number
         self.name = name
         self.year = year
+        self.description = description
 
     def __str__(self) -> str:
         return "{title} S{season:02}E{number:02} {name}".format(

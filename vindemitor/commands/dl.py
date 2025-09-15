@@ -501,7 +501,6 @@ class dl:
                     if hasattr(e, "returncode"):
                         error_messages.append(f"   Binary call failed, Process exit code: {e.returncode}")
                     error_messages.append("   See the error trace above for more information.")
-
                 console.print_exception()
                 console.print(Padding(Group(*error_messages), (1, 5)))
                 return
@@ -513,15 +512,14 @@ class dl:
                 console.print(Padding(f"Track downloads finished in [progress.elapsed]{dl_time}[/]", (0, 5)))
 
                 self.post_processor = PostProcessor(no_source, no_folder, sub_format)
-                with console.status("Checking Video track {video_track_n + 1} for Closed Captions..."):
+                with console.status("Checking Video track for Closed Captions..."):
                     self.post_processor._extract_closed_captions(title)
                 with console.status("Converting Subtitles..."):
                     self.post_processor._convert_subtitles(title)
                 with console.status("Checking Subtitles for Fonts..."):
                     self.post_processor._attach_fonts(title)
-                with console.status("Repackaging tracks with FFMPEG..."):
+                with console.status("Repackaging tracks with ffmpeg..."):
                     self.post_processor._repackage_tracks(title)
-                # TODO: user-defined post-processor?
 
                 progress = Progress(
                     TextColumn("[progress.description]{task.description}"),
@@ -575,6 +573,8 @@ class dl:
                     final_dir.mkdir(parents=True, exist_ok=True)
                     final_path = final_dir / f"{final_filename}{muxed_path.suffix}"
                     shutil.move(muxed_path, final_path)
+                    with console.status("Tagging file with mkvpropedit..."):
+                        self.post_processor._tag_file(final_path, config.tag, title)
 
                 title_dl_time = time_elapsed_since(dl_start_time)
                 console.print(

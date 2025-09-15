@@ -17,6 +17,7 @@ device_cert
 device_client_id_blob
 device_private_key
 device_vmp_blob
+vindemitor/services
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
