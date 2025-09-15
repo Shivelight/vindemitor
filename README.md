@@ -1,36 +1,26 @@
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/17136956/216880837-478f3ec7-6af6-4cca-8eef-5c98ff02104c.png">
-    <a href="https://github.com/devine-dl/devine">Devine</a>
+    <a href="https://github.com/Shivelight/vindemitor">Vindemitor</a>
     <br/>
     <sup><em>Modular Movie, TV, and Music Archival Software</em></sup>
     <br/>
-    <a href="https://discord.gg/34K2MGDrBN">
-        <img src="https://img.shields.io/discord/841055398240059422?label=&logo=discord&logoColor=ffffff&color=7289DA&labelColor=7289DA" alt="Discord">
-    </a>
 </p>
 
 <p align="center">
-    <a href="https://github.com/devine-dl/devine/actions/workflows/ci.yml">
-        <img src="https://github.com/devine-dl/devine/actions/workflows/ci.yml/badge.svg" alt="Build status">
-    </a>
     <a href="https://python.org">
-        <img src="https://img.shields.io/badge/python-3.9.0%2B-informational" alt="Python version">
-    </a>
-    <a href="https://deepsource.io/gh/devine-dl/devine/?ref=repository-badge">
-        <img src="https://deepsource.io/gh/devine-dl/devine.svg/?label=active+issues&token=1ADCbjJ3FPiGT_s0Y0rlugGU" alt="DeepSource">
+        <img src="https://img.shields.io/badge/python-3.11.0%2B-informational" alt="Python version">
     </a>
     <br/>
     <a href="https://github.com/astral-sh/ruff">
         <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff">
     </a>
-    <a href="https://python-poetry.org">
-        <img src="https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json" alt="Dependency management: Poetry">
+    <a href="https://github.com/astral-sh/uv">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="Linter: Ruff">
     </a>
 </p>
 
 ## Features
 
-- 🚀 Seamless Installation via [pip](#installation)
+- 🚀 Seamless Installation via [uv](#installation)
 - 🎥 Movie, Episode, and Song Service Frameworks
 - 🛠️ Built-in [DASH] and [HLS] Parsers
 - 🔒 Widevine DRM integration via [pywidevine](https://github.com/devine-dl/pywidevine)
@@ -41,21 +31,19 @@
 - ⚙️ YAML for Configuration
 - ❤️ Fully Open-Source! Pull Requests Welcome
 
-  [DASH]: <devine/core/manifests/dash.py>
-  [HLS]: <devine/core/manifests/hls.py>
+  [DASH]: <vindemitor/core/manifests/dash.py>
+  [HLS]: <vindemitor/core/manifests/hls.py>
 
 ## Installation
 
 ```shell
-$ pip install devine
+$ git clone https://github.com/Shivelight/vindemitor
+$ cd vindemitor
+$ uv sync
 ```
 
-> [!NOTE]
-> If pip gives you a warning about a path not being in your PATH environment variable then promptly add that path then
-> close all open command prompt/terminal windows, or `devine` won't work as it will not be found.
-
-Voilà 🎉 — You now have the `devine` package installed!
-A command-line interface is now available, try `devine --help`.
+Voilà 🎉 — You now have the `vindemitor` package installed!
+A command-line interface is now available, try `uv run vindemitor --help`.
 
 ### Dependencies
 
@@ -74,8 +62,8 @@ The following is a list of programs that need to be installed by you manually.
 > [!IMPORTANT]
 > Most of these dependencies are portable utilities and therefore do not use installers. If you do not install them
 > from a package repository like winget/choco/pacman then make sure you put them in your current working directory, in
-> Devine's installation directory, or the binary's path into your `PATH` environment variable. If you do not do this
-> then Devine will not be able to find the binaries.
+> Vindemitor's installation directory, or the binary's path into your `PATH` environment variable. If you do not do this
+> then Vindemitor will not be able to find the binaries.
 
   [winget]: <https://winget.run>
   [chocolatey]: <https://chocolatey.org>
@@ -87,15 +75,15 @@ The following is a list of programs that need to be installed by you manually.
 
 ## Usage
 
-First, take a look at `devine --help` for a full help document, listing all commands available and giving you more
-information on what can be done with Devine.
+First, take a look at `uv run vindemitor --help` for a full help document, listing all commands available and giving you more
+information on what can be done with Vindemitor.
 
 Here's a checklist on what I recommend getting started with, in no particular order,
 
-- [ ] Add [Services](#services), these will be used in `devine dl`.
+- [ ] Add [Services](#services), these will be used in `vindemitor dl`.
 - [ ] Add [Profiles](#profiles-cookies--credentials), these are your cookies and credentials.
 - [ ] Add [Widevine Provisions](#widevine-provisions), also known as CDMs, these are used for DRM-protected content.
-- [ ] Set your Group Tag, the text at the end of the final filename, e.g., `devine cfg tag NOGRP` for `...-NOGRP`.
+- [ ] Set your Group Tag, the text at the end of the final filename, e.g., `vindemitor cfg tag NOGRP` for `...-NOGRP`.
 - [ ] Set Up a Local Key Vault, take a look at the [Key Vaults Config](CONFIG.md#keyvaults-listdict).
 
 And here's some more advanced things you could take a look at,
@@ -111,13 +99,13 @@ If you start to get sick of putting something in your CLI call, then I recommend
 
 ## Services
 
-Unlike similar project's such as [youtube-dl], Devine does not currently come with any Services. You must develop your
-own Services and only use Devine with Services you have the legal right to do so.
+Unlike similar project's such as [youtube-dl], Vindemitor does not currently come with any Services. You must develop your
+own Services and only use Vindemitor with Services you have the legal right to do so.
 
 > [!NOTE]
-> If you made a Service for Devine that does not use Widevine or any other DRM systems, feel free to make a Pull Request
+> If you made a Service for Vindemitor that does not use Widevine or any other DRM systems, feel free to make a Pull Request
 > and make your service available to others. Any Service on [youtube-dl] (or [yt-dlp]) would be able to be added to the
-> Devine repository as they both use the [Unlicense license] therefore direct reading and porting of their code would be
+> Vindemitor repository as they both use the [Unlicense license] therefore direct reading and porting of their code would be
 > legal.
 
   [youtube-dl]: <https://github.com/ytdl-org/youtube-dl>
@@ -133,7 +121,7 @@ A Service consists of a folder with an `__init__.py` file. The file must contain
 The class must inherit the [Service] class and implement all the abstracted methods. It must finally implement a new
 method named `cli` where you define CLI arguments.
 
-1. Make a new folder within `/devine/services`. The folder name you choose will be what's known as the [Service Tag].
+1. Make a new folder within `/vindemitor/services`. The folder name you choose will be what's known as the [Service Tag].
    This "tag" is used in the final output filename of downloaded files, for various code-checks, lookup keys in
    key-vault databases, and more.
 2. Within the new folder create an `__init__.py` file and write a class inheriting the [Service] class. It must be named
@@ -173,7 +161,7 @@ method named `cli` where you define CLI arguments.
 > 3. You can include any arbitrary file within your Service folder for use by your Service. For example TLS certificate
 >    files, or other python files with helper functions and classes.
 
-  [Service]: <devine/core/service.py>
+  [Service]: <vindemitor/core/service.py>
   [Service Tag]: <#service-tags>
 
 ### Service Tags
@@ -195,7 +183,7 @@ Service Code.
 
 > [!WARNING]
 > Please be careful with who you trust and what you run. The users you collaborate with on Service
-> code could update it with malicious code that you would run via devine on the next call.
+> code could update it with malicious code that you would run via vindemitor on the next call.
 
 #### Forking
 
@@ -204,7 +192,7 @@ If you are collaborating with a team on multiple services then forking the proje
 1. Create a new Private GitHub Repository without README, .gitignore, or LICENSE files.
    Note: Do NOT use the GitHub Fork button, or you will not be able to make the repository private.
 2. `git clone <your repo url here>` and then `cd` into it.
-3. `git remote add upstream https://github.com/devine-dl/devine`
+3. `git remote add upstream https://github.com/Shivelight/vindemitor`
 4. `git remote set-url --push upstream DISABLE`
 5. `git fetch upstream`
 6. `git pull upstream master`
@@ -225,7 +213,7 @@ If you are new to `git` then take a look at [GitHub Desktop](https://desktop.git
 
 > [!TIP]
 > A huge benefit with this method is that you can also sync dependencies by your own Services as well!
-> Just use `poetry` to add or modify dependencies appropriately and commit the changed `poetry.lock`.
+> Just use `uv` to add or modify dependencies appropriately and commit the changed `poetry.lock`.
 > However, if the core project also has dependency changes your `poetry.lock` changes will conflict and you
 > will need to learn how to do conflict resolution/rebasing. It is worth it though!
 
@@ -241,11 +229,11 @@ Drive, a non-fork repository with just services, and more.
 1. Use any Cloud Source that gives you a pseudo-directory to access the Service files like a normal drive. E.g., rclone,
    Google Drive Desktop (aka File Stream), Air Drive, CloudPool, etc.
 2. Create a `services` directory somewhere in it and have all your services within it.
-3. [Symlink](https://en.wikipedia.org/wiki/Symbolic_link) the `services` directory to the `/devine` folder. You should
-   end up with `/devine/services` folder containing services, not `/devine/services/services`.
+3. [Symlink](https://en.wikipedia.org/wiki/Symbolic_link) the `services` directory to the `/vindemitor` folder. You should
+   end up with `/vindemitor/services` folder containing services, not `/vindemitor/services/services`.
 
 You have to make sure the original folder keeps receiving and downloading/streaming those changes. You must also make
-sure that the version of devine you have locally is supported by the Service code.
+sure that the version of vindemitor you have locally is supported by the Service code.
 
 > [!NOTE]
 > If you're using a cloud source that downloads the file once it gets opened, you don't have to worry as those will
@@ -254,8 +242,8 @@ sure that the version of devine you have locally is supported by the Service cod
 
 ## Cookies & Credentials
 
-Devine can authenticate with Services using Cookies and/or Credentials. Credentials are stored in the config, and
-Cookies are stored in the data directory which can be found by running `devine env info`.
+Vindemitor can authenticate with Services using Cookies and/or Credentials. Credentials are stored in the config, and
+Cookies are stored in the data directory which can be found by running `vindemitor env info`.
 
 To add a Credential to a Service, take a look at the [Credentials Config](CONFIG.md#credentials-dictstr-strlistdict)
 for information on setting up one or more credentials per-service. You can add one or more Credential per-service and
@@ -300,15 +288,15 @@ Any other extension that exports to the standard Netscape format should theoreti
 ## Widevine Provisions
 
 A Widevine Provision is needed for acquiring licenses containing decryption keys for DRM-protected content.
-They are not needed if you will be using devine on DRM-free services. Please do not ask for any Widevine Device Files,
+They are not needed if you will be using vindemitor on DRM-free services. Please do not ask for any Widevine Device Files,
 Keys, or Provisions as they cannot be provided.
 
-Devine only supports `.WVD` files (Widevine Device Files). However, if you have the Provision RSA Private Key and
+Vindemitor only supports `.WVD` files (Widevine Device Files). However, if you have the Provision RSA Private Key and
 Device Client Identification Blob as blob files (e.g., `device_private_key` and `device_client_id_blob`), then you can
 convert them to a `.WVD` file by running `pywidevine create-device --help`.
 
-Once you have `.WVD` files, place them in the WVDs directory which can be found by calling `devine env info`.
-You can then set in your config which WVD (by filename only) to use by default with `devine cfg cdm.default wvd_name`.
+Once you have `.WVD` files, place them in the WVDs directory which can be found by calling `vindemitor env info`.
+You can then set in your config which WVD (by filename only) to use by default with `vindemitor cfg cdm.default wvd_name`.
 From here you can then set which WVD to use for each specific service. It's best to use the lowest security-level
 provision where possible.
 
@@ -318,10 +306,10 @@ config option for setup information. For further information on it see the pywid
 
 ## End User License Agreement
 
-Devine and it's community pages should be treated with the same kindness as other projects.
+Vindemitor and it's community pages should be treated with the same kindness as other projects.
 Please refrain from spam or asking for questions that infringe upon a Service's End User License Agreement.
 
-1. Do not use Devine for any purposes of which you do not have the rights to do so.
+1. Do not use Vindemitor for any purposes of which you do not have the rights to do so.
 2. Do not share or request infringing content; this includes Widevine Provision Keys, Content Encryption Keys,
    or Service API Calls or Code.
 3. The Core codebase is meant to stay Free and Open-Source while the Service code should be kept private.
