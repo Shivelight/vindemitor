@@ -138,17 +138,17 @@ class PostProcessor:
         xml = f"""
         <?xml version="1.0" encoding="UTF-8"?>
         <Tags>
-            <Tag>
-                <Targets/>
-                <Simple>
-                    <Name>Description</Name>
-                    <String>{title.description}</String>
-                </Simple>
-                <Simple>
-                    <Name>Group</Name>
-                    <String>{tag}</String>
-                </Simple>
-            </Tag>
+        <Tag>
+        <Targets/>
+        <Simple>
+        <Name>Description</Name>
+        <String>{title.description}</String>
+        </Simple>
+        <Simple>
+        <Name>Group</Name>
+        <String>{tag}</String>
+        </Simple>
+        </Tag>
         </Tags>
         """
         with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
