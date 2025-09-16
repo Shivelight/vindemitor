@@ -573,7 +573,7 @@ class dl:
                     final_dir.mkdir(parents=True, exist_ok=True)
                     final_path = final_dir / f"{final_filename}{muxed_path.suffix}"
                     shutil.move(muxed_path, final_path)
-                    with console.status("Tagging file with mkvpropedit..."):
+                    if not isinstance(title, Song):
                         self.post_processor._tag_file(final_path, config.tag, title)
 
                 title_dl_time = time_elapsed_since(dl_start_time)

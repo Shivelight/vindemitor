@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from vindemitor.core import binaries
 from vindemitor.core.events import events
 
 from .config import config
@@ -109,6 +110,8 @@ class PostProcessor:
                 events.emit(events.Types.TRACK_REPACKED, track=track)
 
     def _mux_media(self, title: Title_T, tracks: Tracks, progress_callback) -> Path:
+        if not binaries.MkvMerge:
+            raise EnvironmentError("mkvmerge not found but is required!")
         muxed_path, return_code, errors = tracks.mux(str(title), progress=progress_callback, delete=False)
         if return_code >= 2:
             self.log.error(f"Failed to Mux video to Matroska file ({return_code}):")
@@ -127,12 +130,27 @@ class PostProcessor:
         return muxed_path
 
     def _tag_file(self, path, tag, title: Title_T):
-        xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>', "<Tags>", "  <Tag>", "    <Targets/>"]
-        xml_lines.append(f"    <Simple><Name>Description</Name><String>{title.description}</String></Simple>")
-        xml_lines.append(f"    <Simple><Name>Group</Name><String>{tag}</String></Simple>")
-        xml_lines.extend(["  </Tag>", "</Tags>"])
+        if not binaries.MkvPropEdit:
+            self.log.info("mkvpropedit not found. Continuing without tags.")
+            return
+        xml = f"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Tags>
+            <Tag>
+                <Targets/>
+                <Simple>
+                    <Name>Description</Name>
+                    <String>{title.description}</String>
+                </Simple>
+                <Simple>
+                    <Name>Group</Name>
+                    <String>{tag}</String>
+                </Simple>
+            </Tag>
+        </Tags>
+        """
         with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
-            f.write("\n".join(xml_lines))
+            f.write(xml)
             tmp_path = Path(f.name)
         subprocess.run(
             ['mkvpropedit', path, '--tags', f'global:{tmp_path}'],
