@@ -60,7 +60,7 @@ class Vaults:
         success = 0
         for vault in self.vaults:
             try:
-                success += bool(vault.add_keys(self.service, kid_keys))
+                success += vault.add_keys(self.service, kid_keys)
             except (PermissionError, NotImplementedError):
                 pass
         return success
