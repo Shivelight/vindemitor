@@ -19,6 +19,7 @@ class Movie(Title):
         service: type,
         name: str,
         year: Optional[Union[int, str]] = None,
+        description: Optional[str] = None,
         language: Optional[Union[str, Language]] = None,
         data: Optional[Any] = None,
     ) -> None:
@@ -35,6 +36,9 @@ class Movie(Title):
             elif not isinstance(year, int):
                 raise TypeError(f"Expected year to be an int, not {year!r}")
 
+        if description is not None and not isinstance(description, str):
+            raise TypeError(f"Expected description to be a str, not {description!r}")
+
         name = name.strip()
 
         if year is not None and year <= 0:
@@ -42,6 +46,7 @@ class Movie(Title):
 
         self.name = name
         self.year = year
+        self.description = description
 
     def __str__(self) -> str:
         if self.year:

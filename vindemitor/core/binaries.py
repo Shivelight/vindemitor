@@ -21,6 +21,7 @@ def find(*names: str) -> Optional[Path]:
 FFMPEG = find("ffmpeg")
 FFProbe = find("ffprobe")
 FFPlay = find("ffplay")
+MkvPropEdit = find("mkvpropedit")
 SubtitleEdit = find("SubtitleEdit")
 ShakaPackager = find(
     "shaka-packager",

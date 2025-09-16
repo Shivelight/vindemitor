@@ -1,9 +1,13 @@
 import logging
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from vindemitor.core import binaries
 from vindemitor.core.events import events
+from vindemitor.core.titles.song import Song
 
 from .config import config
 from .titles import Title_T
@@ -128,3 +132,44 @@ class PostProcessor:
             video_track.delete()
 
         return muxed_path
+
+    def _tag_file(self, path, tag, title: Title_T):
+        if isinstance(title, Song):
+            return
+
+        if not binaries.MkvPropEdit:
+            self.log.info("mkvpropedit not found. Continuing without tags.")
+            return
+
+        if not title.description:
+            title.description = ""
+        xml = f"""
+<?xml version="1.0" encoding="UTF-8"?>
+<Tags>
+  <Tag>
+  <Targets/>
+    <Simple>
+      <Name>Description</Name>
+      <String>{title.description}</String>
+    </Simple>
+    <Simple>
+      <Name>Group</Name>
+      <String>{tag}</String>
+    </Simple>
+    </Tag>
+</Tags>
+"""
+
+        with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
+            f.write(xml)
+            tmp_path = Path(f.name)
+            # run subprocess outside context manager to make sure the file is closed first on Windows
+
+        subprocess.run(
+            [binaries.MkvPropEdit, path, "--tags", f"global:{tmp_path}"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        tmp_path.unlink(missing_ok=True)
