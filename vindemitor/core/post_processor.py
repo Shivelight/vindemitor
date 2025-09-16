@@ -116,6 +116,8 @@ class PostProcessor:
             self.log.info("Repacked one or more tracks with FFMPEG")
 
     def _mux_media(self, title: Title_T, tracks: Tracks, progress_callback) -> Path:
+        if not binaries.MkvMerge:
+            raise EnvironmentError("mkvmerge not found but is required!")
         muxed_path, return_code, errors = tracks.mux(str(title), progress=progress_callback, delete=False)
         if return_code >= 2:
             self.log.error(f"Failed to Mux video to Matroska file ({return_code}):")
