@@ -133,6 +133,8 @@ class PostProcessor:
         if not binaries.MkvPropEdit:
             self.log.info("mkvpropedit not found. Continuing without tags.")
             return
+        if not title.description:
+            title.description = ""
         xml = f"""
         <?xml version="1.0" encoding="UTF-8"?>
         <Tags>

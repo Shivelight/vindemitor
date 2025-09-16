@@ -35,6 +35,9 @@ class Movie(Title):
                 year = int(year)
             elif not isinstance(year, int):
                 raise TypeError(f"Expected year to be an int, not {year!r}")
+        
+        if description is not None and not isinstance(description, str):
+            raise TypeError(f"Expected description to be a str, not {description!r}")
 
         name = name.strip()
 

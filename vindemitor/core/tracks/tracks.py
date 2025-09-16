@@ -11,7 +11,6 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRe
 from rich.table import Table
 from rich.tree import Tree
 
-from vindemitor.core import binaries
 from vindemitor.core.config import config
 from vindemitor.core.console import console
 from vindemitor.core.constants import LANGUAGE_MAX_DISTANCE, AnyTrack, TrackT
