@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 from functools import cached_property
 from pathlib import Path
@@ -321,6 +322,12 @@ POSSIBLE_CONFIG_PATHS = (
     # The AppDirs User Config Folder (e.g., %localappdata%/vindemitor)
     Paths.Directories.user_configs / Paths.Filenames.root_config,
 )
+
+__EXAMPLE_CONFIG_PATH = Paths.Directories.namespace_dir / "example.vindemitor.toml"
+__USER_EXAMPLE_PATH = Paths.Directories.user_configs / "example.vindemitor.toml"
+
+if not __USER_EXAMPLE_PATH.exists():
+    shutil.copy(__EXAMPLE_CONFIG_PATH, __USER_EXAMPLE_PATH)
 
 
 def get_config_path() -> Optional[Path]:
