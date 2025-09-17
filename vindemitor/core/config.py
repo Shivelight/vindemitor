@@ -237,7 +237,6 @@ class ServiceConfig:
     def __init__(self, name: str, root_config: Config, service_config_doc: tomlkit.TOMLDocument) -> None:
         self.name: str = name
         # Configuration from service config.toml
-        self.require: dict = service_config_doc.pop("require", {})
         self._service_config: dict = service_config_doc
 
         # vindemitor.toml
