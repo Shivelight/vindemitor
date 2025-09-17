@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import click
 from pymediainfo import MediaInfo
@@ -491,7 +491,7 @@ class dl:
                         "   An unexpected error occurred in one of the download workers.",
                     )
                     if hasattr(e, "returncode"):
-                        error_messages.append(f"   Binary call failed, Process exit code: {e.returncode}")
+                        error_messages.append(f"   Binary call failed, Process exit code: {e.returncode}")  # pyright: ignore[reportAttributeAccessIssue]
                     error_messages.append("   See the error trace above for more information.")
 
                 console.print_exception()
@@ -557,7 +557,7 @@ class dl:
                     muxed_paths.append(title.tracks.audio[0].path)
 
                 for muxed_path in muxed_paths:
-                    media_info = MediaInfo.parse(muxed_path)
+                    media_info = cast(MediaInfo, MediaInfo.parse(muxed_path))
                     final_dir = config.paths.directories.downloads
                     final_filename = title.get_filename(media_info, show_service=not no_source)
 
@@ -567,7 +567,7 @@ class dl:
                     final_dir.mkdir(parents=True, exist_ok=True)
                     final_path = final_dir / f"{final_filename}{muxed_path.suffix}"
                     shutil.move(muxed_path, final_path)
-                    self.post_processor._tag_file(final_path, config.tag, title)
+                    self.post_processor._tag_file(final_path, config.general.tag, title)
 
                 title_dl_time = time_elapsed_since(dl_start_time)
                 console.print(

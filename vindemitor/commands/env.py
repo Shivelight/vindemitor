@@ -57,7 +57,7 @@ def info() -> None:
     console.print(Padding(table, (1, 5)))
 
 
-@env.group(name="clear", short_help="Clear an environment directory.", context_settings=context_settings)
+@env.group(name="clear", short_help="Clear cache or temp directory.", context_settings=context_settings)
 def clear() -> None:
     """Clear an environment directory."""
 
