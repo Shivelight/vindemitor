@@ -234,8 +234,8 @@ class Config:
 
 
 class ServiceConfig:
-    def __init__(self, name: str, root_config: Config, service_config_doc: tomlkit.TOMLDocument) -> None:
-        self.name: str = name
+    def __init__(self, service_name: str, root_config: Config, service_config_doc: tomlkit.TOMLDocument) -> None:
+        self.name: str = service_name
         # Configuration from service config.toml
         self._service_config: dict = service_config_doc
 
@@ -243,42 +243,58 @@ class ServiceConfig:
         self._root_config = root_config
 
         # User Configuration e.g., [services.EXAMPLE] from vindemitor.toml
-        self._user_config = self._root_config.services.get(self.name, {})
-        self._profile: str | None = None
-        self._profiles: dict[str, dict] = self._user_config.pop("profiles", {})
+        self._service_user_config = self._root_config.services.get(self.name, {})
+        self._service_user_profiles: dict[str, dict] = self._service_user_config.pop("profiles", {})
+        self._selected_profile: str | None = None
 
-        # Merge and/or override service config.toml with [services.EXAMPLE.config] from vindemitor.toml
-        user_service_config = self._user_config.get("config", {})
-        merge_dict(user_service_config, self._service_config)
-
-    def _get_profile_or_user_prop(self, key: str, default=None):
-        # profile specific config first
-        if self.profile and (p_conf := self._profiles.get(self.profile)):
+    def _get_profile_or_user_config(self, key: str, default=None):
+        # get user profile config first [services.EXAMPLE.profiles.xxx.key]
+        if self.profile and (p_conf := self._service_user_profiles.get(self.profile)):
             if value := p_conf.get(key):
                 return value
-        # then user config
-        if value := self._user_config.get(key):
+        # then user config [services.EXAMPLE.key]
+        if value := self._service_user_config.get(key):
             return value
-        # lastly default, usually from global/root config
+        # lastly the default, usually from global/root config
         return default
+
+    def _get_profile_or_user_service_config(self, key):
+        # get value from [services.EXAMPLE.config] or [services.EXAMPLE.profiles.xxx.config]
+        if config := self._get_profile_or_user_config("config"):
+            if value := config.get(key):
+                # merging allow for fine grained configuration overrides
+                if default := self._service_config.get(key):
+                    # defensive copy to ensure idempotency even thought it is almost unecessary
+                    # since the configuration profile only set once per run by vindemitor,
+                    # so merging two config directly will still return the same result on subsequent calls
+                    copy = default.copy()
+                    merge_dict(value, copy)
+                    return copy
+                return value
+
+        # else get value from service config.toml
+        return self._service_config[key]
+
+    def __getitem__(self, key):
+        return self._get_profile_or_user_service_config(key)
 
     @property
     def profile(self):
-        return self._profile
+        return self._selected_profile
 
     def set_profile(self, value: str | None):
         if value is None:
-            self._profile = value
+            self._selected_profile = value
             return
 
-        if value in self._profiles:
-            self._profile = value
+        if value in self._service_user_profiles:
+            self._selected_profile = value
         else:
             raise ValueError(f"Service {self.name} has no profile called '{value}' configured")
 
     @property
-    def cdm(self):
-        cdm_name: str | None = self._get_profile_or_user_prop("cdm", self._root_config.drm.default_cdm)
+    def cdm(self) -> CDM_T:
+        cdm_name: str | None = self._get_profile_or_user_config("cdm", self._root_config.drm.default_cdm)
         if not cdm_name:
             raise ValueError(
                 f"No CDM configured for service '{self.name}'. "
@@ -296,11 +312,11 @@ class ServiceConfig:
 
     @property
     def credential(self):
-        return self._get_profile_or_user_prop("credential", "")
+        return self._get_profile_or_user_config("credential", "")
 
     @property
     def downloader(self):
-        return self._get_profile_or_user_prop("downloader", self._root_config.network.downloader)
+        return self._get_profile_or_user_config("downloader", self._root_config.network.downloader)
 
     @classmethod
     def from_toml(cls, name: str, root_config: Config, path: Path) -> ServiceConfig:

@@ -15,7 +15,7 @@ from rich.padding import Padding
 from rich.rule import Rule
 
 from vindemitor.core.cacher import Cacher
-from vindemitor.core.config import config
+from vindemitor.core.config import ServiceConfig, config
 from vindemitor.core.console import console
 from vindemitor.core.constants import AnyTrack
 from vindemitor.core.credential import Credential
@@ -37,7 +37,7 @@ class Service(metaclass=ABCMeta):
     def __init__(self, ctx: click.Context):
         console.print(Padding(Rule(f"[rule.text]Service: {self.__class__.__name__}"), (1, 2)))
 
-        self.config = ctx.obj.config
+        self.config: ServiceConfig = ctx.obj.config
 
         self.log = logging.getLogger(self.__class__.__name__)
 
