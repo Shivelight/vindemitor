@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Optional, TypeAlias
 
 import tomlkit
-from appdirs import AppDirs
 from construct import ConstError
+from platformdirs import AppDirs
 from pywidevine import Cdm as WidevineCdm
 from pywidevine import Device
 from pywidevine import RemoteCdm as RemoteWidevineCdm
