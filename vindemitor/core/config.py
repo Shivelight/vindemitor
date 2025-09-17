@@ -178,14 +178,13 @@ class Paths:
         vaults = namespace_dir / "vaults"
         fonts = namespace_dir / "fonts"
         user_configs = Path(app_dirs.user_config_dir)
-        data = Path(app_dirs.user_data_dir)
         downloads = Path.home() / "Downloads" / "vindemitor"
         temp = Path(tempfile.gettempdir()) / "vindemitor"
         cache = Path(app_dirs.user_cache_dir)
-        cookies = data / "Cookies"
+        cookies = user_configs / "Cookies"
         logs = Path(app_dirs.user_log_dir)
-        wvds = data / "WVDs"
-        dcsl = data / "DCSL"
+        wvds = user_configs / "WVDs"
+        dcsl = user_configs / "DCSL"
 
     class Filenames:
         log = "vindemitor_{name}_{time}.log"
