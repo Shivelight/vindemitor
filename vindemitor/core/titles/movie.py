@@ -46,7 +46,7 @@ class Movie(Title):
 
         self.name = name
         self.year = year
-        self.matroska_tags = matroska_tags
+        self.matroska_tags: dict[str, str | dict] = matroska_tags or {}
 
     def __str__(self) -> str:
         if self.year:

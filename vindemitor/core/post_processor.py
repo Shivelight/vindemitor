@@ -147,12 +147,11 @@ class PostProcessor:
             self.log.info("mkvpropedit not found. Continuing without tags.")
             return
 
-        tags = title.matroska_tags or {}
         if config.processors.tags_matroska["tag_group"]:
-            tags["Group"] = config.general.tag
+            title.matroska_tags["Group"] = config.general.tag
 
-        if tags:
-            tags_xml = matroska_tags_xml(tags)
+        if title.matroska_tags:
+            tags_xml = matroska_tags_xml(title.matroska_tags)
 
             with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as f:
                 f.write(tags_xml)

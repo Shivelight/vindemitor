@@ -38,8 +38,8 @@ def matroska_tags_xml(data: dict[str, str | dict]) -> bytes:
         if isinstance(data, dict):
             string = etree.SubElement(simple, "String")
             string.text = data.get("value", "")
-            if "nested" in data:
-                for nested_name, nested_data in data["nested"].items():
+            if nested := data.get("nested"):
+                for nested_name, nested_data in nested.items():
                     create_simple_element(simple, nested_name, nested_data)
         else:
             string = etree.SubElement(simple, "String")
