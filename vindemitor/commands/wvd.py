@@ -1,10 +1,10 @@
+import json
 import logging
 import shutil
 from pathlib import Path
 from typing import Optional
 
 import click
-import yaml
 from google.protobuf.json_format import MessageToDict
 from pywidevine.device import Device, DeviceTypes
 from pywidevine.license_protocol_pb2 import FileHashes
@@ -157,8 +157,8 @@ def dump(wvd_paths: list[Path], out_dir: Path) -> None:
         for client_info in device.client_id.client_info:
             device_meta["client_info"][client_info.name] = client_info.value
 
-        device_meta_path = out_path / "metadata.yml"
-        device_meta_path.write_text(yaml.dump(device_meta), encoding="utf8")
+        device_meta_path = out_path / "metadata.json"
+        device_meta_path.write_text(json.dumps(device_meta), encoding="utf8")
         log.info(" + Device Metadata")
 
         if device.private_key:

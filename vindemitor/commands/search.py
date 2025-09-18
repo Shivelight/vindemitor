@@ -6,23 +6,19 @@ import sys
 from typing import Any, Optional
 
 import click
-import yaml
 from rich.padding import Padding
 from rich.rule import Rule
 from rich.tree import Tree
 
-from vindemitor.core import binaries
 from vindemitor.core.config import config
 from vindemitor.core.console import console
 from vindemitor.core.constants import context_settings
 from vindemitor.core.cookies import get_cookie_jar, get_cookie_path, save_cookies
 from vindemitor.core.credential import get_credentials
-from vindemitor.core.proxies import Basic, Hola, NordVPN
 from vindemitor.core.proxies.proxy import Proxy
 from vindemitor.core.service import Service
 from vindemitor.core.services import Services
 from vindemitor.core.utils.click_types import ContextData
-from vindemitor.core.utils.collections import merge_dict
 
 
 @click.command(
