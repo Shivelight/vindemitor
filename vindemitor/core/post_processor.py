@@ -8,6 +8,7 @@ from typing import Any
 from vindemitor.core import binaries
 from vindemitor.core.events import events
 from vindemitor.core.titles.song import Song
+from vindemitor.core.utils.xml import matroska_tags_xml
 
 from .config import config
 from .titles import Title_T
@@ -115,7 +116,7 @@ class PostProcessor:
             # we don't want to fill up the log with "Repacked x track"
             self.log.info("Repacked one or more tracks with FFMPEG")
 
-    def _mux_media(self, title: Title_T, tracks: Tracks, progress_callback) -> Path:
+    def _mux(self, title: Title_T, tracks: Tracks, progress_callback) -> Path:
         if not binaries.MkvMerge:
             raise EnvironmentError("mkvmerge not found but is required!")
         muxed_path, return_code, errors = tracks.mux(str(title), progress=progress_callback, delete=False)
@@ -135,7 +136,10 @@ class PostProcessor:
 
         return muxed_path
 
-    def _tag_file(self, path, tag, title: Title_T):
+    def _tags_matroska(self, path, title: Title_T):
+        if not config.processors.tags_matroska["enable"]:
+            return
+
         if isinstance(title, Song):
             return
 
@@ -143,35 +147,23 @@ class PostProcessor:
             self.log.info("mkvpropedit not found. Continuing without tags.")
             return
 
-        if not title.description:
-            title.description = ""
-        xml = f"""
-<?xml version="1.0" encoding="UTF-8"?>
-<Tags>
-  <Tag>
-  <Targets/>
-    <Simple>
-      <Name>Description</Name>
-      <String>{title.description}</String>
-    </Simple>
-    <Simple>
-      <Name>Group</Name>
-      <String>{tag}</String>
-    </Simple>
-    </Tag>
-</Tags>
-"""
+        tags = title.matroska_tags or {}
+        if config.processors.tags_matroska["tag_group"]:
+            tags["Group"] = config.general.tag
 
-        with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
-            f.write(xml)
-            tmp_path = Path(f.name)
-            # run subprocess outside context manager to make sure the file is closed first on Windows
+        if tags:
+            tags_xml = matroska_tags_xml(tags)
 
-        subprocess.run(
-            [binaries.MkvPropEdit, path, "--tags", f"global:{tmp_path}"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+            with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as f:
+                f.write(tags_xml)
+                tmp_path = Path(f.name)
+                # run subprocess outside context manager to make sure the file is closed first on Windows
 
-        tmp_path.unlink(missing_ok=True)
+            subprocess.run(
+                [binaries.MkvPropEdit, path, "--tags", f"global:{tmp_path}"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            tmp_path.unlink(missing_ok=True)

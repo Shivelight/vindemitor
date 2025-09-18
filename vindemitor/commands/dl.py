@@ -545,7 +545,7 @@ class dl:
 
                     for task_id, task_tracks in tasks:
                         with Live(Padding(progress, (0, 5, 1, 5)), console=console):
-                            muxed_path = self.post_processor._mux_media(
+                            muxed_path = self.post_processor._mux(
                                 title, task_tracks, partial(progress.update, task_id=task_id)
                             )
                             muxed_paths.append(muxed_path)
@@ -567,7 +567,7 @@ class dl:
                     final_dir.mkdir(parents=True, exist_ok=True)
                     final_path = final_dir / f"{final_filename}{muxed_path.suffix}"
                     shutil.move(muxed_path, final_path)
-                    self.post_processor._tag_file(final_path, config.general.tag, title)
+                    self.post_processor._tags_matroska(final_path, title)
 
                 title_dl_time = time_elapsed_since(dl_start_time)
                 console.print(

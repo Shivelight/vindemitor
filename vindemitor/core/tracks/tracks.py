@@ -295,7 +295,7 @@ class Tracks:
             "--no-date",  # remove dates from the output for security
         ]
 
-        if config.processors.muxing.get("set_title", True):
+        if config.processors.mux.get("set_title", True):
             cl.extend(["--title", title])
 
         for i, vt in enumerate(self.videos):

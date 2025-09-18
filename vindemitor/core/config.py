@@ -85,7 +85,8 @@ class Network:
 class Processors:
     def __init__(self, data: dict | None = None):
         data = data or {}
-        self.muxing: dict = data.get("muxing", {"set_title": True})
+        self.mux: dict = data.get("mux", {"set_title": True})
+        self.tags_matroska: dict = data.get("tags_matroska", {"enable": False, "tag_group": True})
 
 
 class LocalCdm:

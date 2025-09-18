@@ -82,10 +82,25 @@ us = 12
 # [ 3 ] Post-processing Configuration
 # -----------------------------------------------------------------------------
 # All settings related to how vindemitor handles post-processing.
+#
+# Built-in post-processors (executed in order):
+# - extract_closed_captions
+# - convert_subtitles
+# - attach_fonts
+# - repackage_tracks
+# - mux *
+# - tags_matroska †
+#
+# *: configurable | †: toggleable
 
-[processors.muxing]
+[processors.mux]
 # Set the container title to `Show SXXEXX Episode Name` or `Movie (Year)`. Default: true
 set_title = true
+
+[processors.tags_matroska]
+# TODO: documentation
+enable = false
+tag_group = true
 
 # -----------------------------------------------------------------------------
 # [ 4 ] DRM & Key Management

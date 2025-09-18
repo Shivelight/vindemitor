@@ -24,9 +24,9 @@ class Episode(Title):
         number: Union[int, str],
         name: Optional[str] = None,
         year: Optional[Union[int, str]] = None,
-        description: Optional[str] = None,
         language: Optional[Union[str, Language]] = None,
         data: Optional[Any] = None,
+        matroska_tags: Optional[dict[str, str | dict]] = None,
     ) -> None:
         super().__init__(id_, service, language, data)
 
@@ -58,8 +58,8 @@ class Episode(Title):
             elif not isinstance(year, int):
                 raise TypeError(f"Expected year to be an int, not {year!r}")
 
-        if description is not None and not isinstance(description, str):
-            raise TypeError(f"Expected description to be a str, not {description!r}")
+        if matroska_tags and not isinstance(matroska_tags, dict):
+            raise TypeError(f"Expected matroska_tags to be a dict, not {name!r}")
 
         title = title.strip()
 
@@ -79,7 +79,7 @@ class Episode(Title):
         self.number = number
         self.name = name
         self.year = year
-        self.description = description
+        self.matroska_tags = matroska_tags
 
     def __str__(self) -> str:
         return "{title} S{season:02}E{number:02} {name}".format(
