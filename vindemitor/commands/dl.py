@@ -115,7 +115,7 @@ class dl:
         "--wanted",
         type=SEASON_RANGE,
         default=None,
-        help="Wanted episodes, e.g. `S01-S05,S07`, `S01E01-S02E03`, `S02-S02E03`, e.t.c, defaults to all.",
+        help="Wanted episodes, e.g. `S01-S05,S07`, `S01E01-S02E03`, `S02-S02E03`, `latest`, e.t.c, defaults to all.",
     )
     @click.option("-l", "--lang", type=LANGUAGE_RANGE, default="en", help="Language wanted for Video and Audio.")
     @click.option(
@@ -348,8 +348,17 @@ class dl:
             return
 
         title: Title_T
+        latest = titles[-1]
         for i, title in enumerate(titles):
-            if isinstance(title, Episode) and wanted and f"{title.season}x{title.number}" not in wanted:
+            if (
+                isinstance(title, Episode)
+                and wanted
+                and (
+                    f"{title.season}x{title.number}" not in wanted
+                    and not ("latest" in wanted and title == latest)
+                    or ("-latest" in wanted and title == latest)
+                )
+            ):
                 continue
 
             console.print(Padding(Rule(f"[rule.text]{title}"), (1, 2)))

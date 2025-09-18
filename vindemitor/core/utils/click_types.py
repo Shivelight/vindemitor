@@ -31,6 +31,7 @@ class SeasonRange(click.ParamType):
         """
         Parse multiple tokens or ranged tokens as '{s}x{e}' strings.
 
+        Supports special keyword 'latest' for latest episode.
         Supports exclusioning by putting a `-` before the token.
 
         Example:
@@ -46,7 +47,15 @@ class SeasonRange(click.ParamType):
             return []
         computed: list = []
         exclusions: list = []
+        latest = None
         for token in tokens:
+            if token.lower() == "latest":
+                latest = True
+                continue
+            if token.lower() == "-latest":
+                latest = False
+                continue
+
             exclude = token.startswith("-")
             if exclude:
                 token = token[1:]
@@ -81,6 +90,14 @@ class SeasonRange(click.ParamType):
         for exclusion in exclusions:
             if exclusion in computed:
                 computed.remove(exclusion)
+
+        # to be included or excluded later by `dl` command
+        # since we don't know the latest episode yet
+        if latest is True:
+            computed.append("latest")
+        elif latest is False:
+            computed.append("-latest")
+
         return list(set(computed))
 
     def convert(
