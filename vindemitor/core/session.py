@@ -144,7 +144,7 @@ class HTTPXSession(ServiceSession):
     _httpx_logger.setLevel(logging.WARNING)
 
     def __init__(self, session: httpx.Client | None = None) -> None:
-        self.session: httpx.Client = session or httpx.Client()
+        self.session: httpx.Client = session or httpx.Client(follow_redirects=True)
 
     def get(self, url: str, **kwargs: Any) -> httpx.Response:
         return self.session.get(url, **kwargs)
