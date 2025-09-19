@@ -86,8 +86,7 @@ class Service(metaclass=ABCMeta):
     # Otherwise, the base service code (if any) of the function will be executed on call.
     # The functions will be executed in shown order.
 
-    @staticmethod
-    def get_session() -> ServiceSession:
+    def get_session(self) -> ServiceSession:
         """
         Creates a Python-requests Session, adds common headers
         from config, cookies, retry handler, and a proxy if available.
@@ -122,7 +121,7 @@ class Service(metaclass=ABCMeta):
         if cookies is not None:
             if not isinstance(cookies, CookieJar):
                 raise TypeError(f"Expected cookies to be a {CookieJar}, not {cookies!r}.")
-            self.session.cookies.update(cookies)
+            self.session.cookies.update(cookies)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     def search(self) -> Generator[SearchResult, None, None]:
         """
