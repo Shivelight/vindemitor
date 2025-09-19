@@ -92,7 +92,7 @@ class RequestsSession(ServiceSession):
         return self.session.get(url, **kwargs)
 
     def post(self, url: str, data: Any = None, json: Any = None, **kwargs: Any) -> requests.Response:
-        return self.session.post(url, data=data, json=json**kwargs)
+        return self.session.post(url, data=data, json=json, **kwargs)
 
     def close(self) -> None:
         self.session.close()
@@ -122,7 +122,7 @@ class RequestsSession(ServiceSession):
 
     @property
     def proxy(self) -> str | None:
-        return self.session.proxies["all"]
+        return self.session.proxies.get("all")
 
     @proxy.setter
     def proxy(self, proxy: str) -> None:
