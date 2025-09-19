@@ -6,8 +6,11 @@ from typing import Any
 
 import httpcore
 import httpx
+import niquests
 import requests
 from httpx._utils import URLPattern
+from niquests.cookies import RequestsCookieJar as NiquestCookieJar
+from niquests.structures import CaseInsensitiveDict as NiquestCaseInsensitiveDict
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict as RequestCaseInsensitiveDict
 
@@ -191,6 +194,55 @@ class HTTPXSession(ServiceSession):
     def proxy(self, proxy: str) -> None:
         new_proxy_transport = self.session._init_proxy_transport(httpx.Proxy(proxy))
         self.session._mounts.update({URLPattern("all://"): new_proxy_transport})
+
+
+class NiquestsSession(ServiceSession):
+    def __init__(self, session: niquests.Session | None = None) -> None:
+        self.session: niquests.Session = session or niquests.Session()
+
+    def get(self, url: str, **kwargs: Any) -> niquests.Response:
+        return self.session.get(url, **kwargs)
+
+    def post(self, url: str, data: Any = None, json: Any = None, **kwargs: Any) -> niquests.Response:
+        return self.session.post(url, data=data, json=json, **kwargs)
+
+    def close(self) -> None:
+        self.session.close()
+
+    @property
+    def cookies(self) -> NiquestCookieJar:
+        if isinstance(self.session.cookies, CookieJar):
+            nijar = NiquestCookieJar()
+            nijar.update(self.session.cookies)
+            self.session.cookies = nijar
+        return self.session.cookies
+
+    @cookies.setter
+    def cookies(self, cookies: MutableMapping | CookieJar) -> None:
+        if isinstance(cookies, MutableMapping):
+            self.cookies.update(cookies)
+        else:
+            self.session.cookies = cookies  # pyright: ignore[reportAttributeAccessIssue]
+
+    @property
+    def cookiejar(self) -> CookieJar:
+        return self.session.cookies
+
+    @property
+    def headers(self) -> MutableMapping:
+        return self.session.headers
+
+    @headers.setter
+    def headers(self, headers: MutableMapping) -> None:
+        self.session.headers = NiquestCaseInsensitiveDict(headers)
+
+    @property
+    def proxy(self) -> str | None:
+        return self.session.proxies.get("all")
+
+    @proxy.setter
+    def proxy(self, proxy: str) -> None:
+        self.session.proxies.update({"all": proxy})
 
 
 DefaultSession = RequestsSession
