@@ -9,6 +9,7 @@ import httpx
 import requests
 from httpx._utils import URLPattern
 from requests.cookies import RequestsCookieJar
+from requests.structures import CaseInsensitiveDict as RequestCaseInsensitiveDict
 
 
 class ServiceSession(ABC):
@@ -99,6 +100,10 @@ class RequestsSession(ServiceSession):
 
     @property
     def cookies(self) -> RequestsCookieJar:
+        if isinstance(self.session.cookies, CookieJar):
+            jar = RequestsCookieJar()
+            jar.update(self.session.cookies)
+            self.session.cookies = jar
         return self.session.cookies
 
     @cookies.setter
@@ -118,7 +123,7 @@ class RequestsSession(ServiceSession):
 
     @headers.setter
     def headers(self, headers: MutableMapping) -> None:
-        self.session.headers = headers
+        self.session.headers = RequestCaseInsensitiveDict(headers)
 
     @property
     def proxy(self) -> str | None:
@@ -171,7 +176,7 @@ class HTTPXSession(ServiceSession):
 
     @headers.setter
     def headers(self, headers: MutableMapping) -> None:
-        self.session.headers = headers
+        self.session.headers = httpx.Headers(headers)
 
     @property
     def proxy(self) -> str | None:
