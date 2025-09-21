@@ -4,6 +4,7 @@ from collections.abc import Mapping, MutableMapping
 from http.cookiejar import CookieJar
 from typing import Any
 
+import curl_cffi
 import httpcore
 import httpx
 import niquests
@@ -235,6 +236,51 @@ class NiquestsSession(ServiceSession):
     @headers.setter
     def headers(self, headers: MutableMapping) -> None:
         self.session.headers = NiquestCaseInsensitiveDict(headers)
+
+    @property
+    def proxy(self) -> str | None:
+        return self.session.proxies.get("all")
+
+    @proxy.setter
+    def proxy(self, proxy: str) -> None:
+        self.session.proxies.update({"all": proxy})
+
+
+class CurlImpersonateSession(ServiceSession):
+    def __init__(self, session: curl_cffi.Session | None = None) -> None:
+        self.session: curl_cffi.Session = session or curl_cffi.Session()
+
+    def get(self, url: str, **kwargs: Any) -> curl_cffi.Response:
+        return self.session.get(url, **kwargs)
+
+    def post(self, url: str, data: Any = None, json: Any = None, **kwargs: Any) -> curl_cffi.Response:
+        return self.session.post(url, data=data, json=json, **kwargs)
+
+    def close(self) -> None:
+        self.session.close()
+
+    @property
+    def cookies(self) -> curl_cffi.Cookies:
+        return self.session.cookies
+
+    @cookies.setter
+    def cookies(self, cookies: MutableMapping | CookieJar) -> None:
+        if isinstance(cookies, MutableMapping):
+            self.cookies.update(cookies)  # pyright: ignore[reportArgumentType]
+        else:
+            self.session.cookies.jar = cookies  # pyright: ignore[reportAttributeAccessIssue]
+
+    @property
+    def cookiejar(self) -> CookieJar:
+        return self.session.cookies.jar
+
+    @property
+    def headers(self) -> MutableMapping:
+        return self.session.headers
+
+    @headers.setter
+    def headers(self, headers: MutableMapping) -> None:
+        self.session.headers = curl_cffi.Headers(headers)
 
     @property
     def proxy(self) -> str | None:
