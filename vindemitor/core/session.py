@@ -247,8 +247,13 @@ class NiquestsSession(ServiceSession):
 
 
 class CurlImpersonateSession(ServiceSession):
-    def __init__(self, session: curl_cffi.Session | None = None) -> None:
-        self.session: curl_cffi.Session = session or curl_cffi.Session()
+    def __init__(self, session: curl_cffi.Session | curl_cffi.BrowserTypeLiteral | None = None) -> None:
+        if isinstance(session, str):
+            self.session = curl_cffi.Session(impersonate=session)
+        elif session is None:
+            self.session = curl_cffi.Session()
+        else:
+            self.session = session
 
     def get(self, url: str, **kwargs: Any) -> curl_cffi.Response:
         return self.session.get(url, **kwargs)
