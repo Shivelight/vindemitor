@@ -172,7 +172,7 @@ class ClickDefaultMap:
 
 class Paths:
     class Directories:
-        app_dirs = AppDirs("vindemitor", False)
+        app_dirs = AppDirs("vindemitor", False, ensure_exists=True)
         core_dir = Path(__file__).resolve().parent
         namespace_dir = core_dir.parent
         commands = namespace_dir / "commands"
