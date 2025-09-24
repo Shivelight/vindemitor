@@ -9,7 +9,7 @@ class Vaults:
     """Keeps hold of Key Vaults with convenience functions, e.g. searching all vaults."""
 
     def __init__(self, default_service: Optional[str] = None):
-        self.default_service = default_service or ""
+        self.default_service = default_service or None
         self.vaults: list[Vault] = config.drm.vaults
 
     def __iter__(self) -> Iterator[Vault]:
@@ -21,6 +21,8 @@ class Vaults:
     def get_key(self, kid: Union[UUID, str], service: str | None = None) -> tuple[Optional[str], Optional[Vault]]:
         """Get Key from the first Vault it can by KID (Key ID) and Service."""
         service = service or self.default_service
+        if not service:
+            raise ValueError("Service must be specified to retrieve a key, and no default service has been set.")
         for vault in self.vaults:
             key = vault.get_key(kid, service)
             if key and key.count("0") != len(key):
@@ -32,6 +34,8 @@ class Vaults:
     ) -> int:
         """Add a KID:KEY to all Vaults, optionally with an exclusion."""
         service = service or self.default_service
+        if not service:
+            raise ValueError("Service must be specified to add a key, and no default service has been set.")
         success = 0
         for vault in self.vaults:
             if vault != excluding:
@@ -46,10 +50,13 @@ class Vaults:
         Add multiple KID:KEYs to all Vaults. Duplicate Content Keys are skipped.
         PermissionErrors when the user cannot create Tables are absorbed and ignored.
         """
+        service = service or self.default_service
+        if not service:
+            raise ValueError("Service must be specified to add a key, and no default service has been set.")
         success = 0
         for vault in self.vaults:
             try:
-                success += vault.add_keys(self.service, kid_keys)
+                success += vault.add_keys(service, kid_keys)
             except (PermissionError, NotImplementedError):
                 pass
         return success
