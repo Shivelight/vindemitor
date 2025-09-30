@@ -131,28 +131,6 @@ security_level = 3
 host = "http://my-cdm-server:8786"
 secret = "my-secret-key"
 
-# Configuration data for pywidevine's serve functionality run through vindemitor.
-# This effectively allows you to run `vindemitor serve` to start serving pywidevine Serve-compliant CDMs right from your
-# local widevine device files.
-# Upstream example: https://github.com/devine-dl/pywidevine/blob/master/serve.example.yml
-[drm.serve]
-# List of Widevine Device (.wvd) file paths to use with serve.
-# Note: Each individual user needs explicit permission to use a device listed.
-# Note: vindemitor will automatically extends the list with local devices from 'Wvds' directory.
-#       Here you can manually specify device paths if you don't want to add it to 'Wvds' directory.
-# TOML uses single quote for literal strings.
-devices = ['C:\Users\john\Devices\test_devices_001.wvd']
-force_privacy_mode = false
-
-# users table key is the secret key and it must be unique for each user.
-[drm.serve.users.ce0e150e5ad8a4453d33df3dfa9f1ac4177e3c39da10fa1277950f0edba5ed82]
-devices = ["my_l3_device", "generic_nexus_4464_l3"] # list of allowed devices by filename
-username = "james" # only for internal logging, users will not see this name
-
-[drm.serve.users.jane_secret_key]
-devices = ["my_l3_device"]
-username = "jane"
-
 # Key Vault configurations (Array of Tables).
 [[drm.vaults]]
 name = "LocalDB"

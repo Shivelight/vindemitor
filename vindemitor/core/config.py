@@ -134,7 +134,6 @@ class DRM:
         data = data or {}
         # [drm]
         self.default_cdm: str = data.get("default_cdm", "")
-        self.extra_serve_devices: list[str] = data.get("extra_serve_devices", [])
 
         # [drm.cdm.]
         self.cdm: dict[str, CDM_T] = {}
@@ -152,9 +151,6 @@ class DRM:
                 raise ValueError(f"Duplicate CDM keys: {rcdm_name}")
             if rcdm_data:
                 self.cdm[rcdm_name] = RemoteCdm(**rcdm_data)
-
-        # [drm.serve.]
-        self.serve: dict[str, str | list[str]] = data.get("serve", {})
 
         # [drm.vaults.]
         self.vaults: list[Vault] = []

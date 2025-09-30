@@ -39,10 +39,17 @@ CCExtractor = find(
 )
 HolaProxy = find("hola-proxy")
 MPV = find("mpv")
-Caddy = find("caddy")
 
 
 __all__ = (
-    "FFMPEG", "FFProbe", "FFPlay", "SubtitleEdit", "ShakaPackager",
-    "Aria2", "CCExtractor", "HolaProxy", "MPV", "Caddy", "find"
+    "FFMPEG",
+    "FFProbe",
+    "FFPlay",
+    "SubtitleEdit",
+    "ShakaPackager",
+    "Aria2",
+    "CCExtractor",
+    "HolaProxy",
+    "MPV",
+    "find",
 )
