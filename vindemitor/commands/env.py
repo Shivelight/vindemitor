@@ -39,9 +39,9 @@ def info() -> None:
     table.add_column("Path")
 
     path_vars = {
-        x: Path(os.getenv(x))
+        x: Path(path)
         for x in ("TEMP", "APPDATA", "LOCALAPPDATA", "USERPROFILE")
-        if sys.platform == "win32" and os.getenv(x)
+        if sys.platform == "win32" and (path := os.getenv(x))
     }
 
     for name in sorted(dir(config.paths.directories)):
