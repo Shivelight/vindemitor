@@ -4,6 +4,7 @@ import base64
 import shutil
 import subprocess
 import textwrap
+import sys
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 from uuid import UUID
@@ -207,6 +208,12 @@ class Widevine:
             ValueError if the track has not yet been downloaded.
             SubprocessError if Shaka Packager returned a non-zero exit code.
         """
+        # Determine ctrl+c exit code for platforms.
+        if sys.platform == "win32":
+            CTRL_C_SIGNAL = 0xC000013A
+        elif sys.platform == "linux":
+            CTRL_C_SIGNAL = 2
+
         if not self.content_keys:
             raise ValueError("Cannot decrypt a Track without any Content Keys...")
 
@@ -240,7 +247,8 @@ class Widevine:
                 subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             except subprocess.CalledProcessError as e:
-                if e.returncode == 0xC000013A:  # STATUS_CONTROL_C_EXIT
+                print(e.returncode)
+                if e.returncode == CTRL_C_SIGNAL:
                     raise KeyboardInterrupt()
                 else:
                     error_msg = e.stderr if e.stderr else f"mp4decrypt failed with exit code {e.returncode}"
@@ -315,7 +323,7 @@ class Widevine:
                 if not stream_skipped:
                     shutil.move(output_path, path)
             except subprocess.CalledProcessError as e:
-                if e.returncode == 0xC000013A:  # STATUS_CONTROL_C_EXIT
+                if e.returncode == CTRL_C_SIGNAL:
                     raise KeyboardInterrupt()
                 raise
 
