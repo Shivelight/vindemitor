@@ -4,6 +4,7 @@ import base64
 import shutil
 import subprocess
 import textwrap
+import sys
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 from uuid import UUID
@@ -203,89 +204,128 @@ class Widevine:
         """
         Decrypt a Track with Widevine DRM.
         Raises:
-            EnvironmentError if the Shaka Packager executable could not be found.
+            EnvironmentError if the Shaka Packager or mp4decrypt executable could not be found.
             ValueError if the track has not yet been downloaded.
             SubprocessError if Shaka Packager returned a non-zero exit code.
         """
+        # Determine ctrl+c exit code for platforms.
+        if sys.platform == "win32":
+            CTRL_C_SIGNAL = 0xC000013A
+        elif sys.platform == "linux":
+            CTRL_C_SIGNAL = 2
+
         if not self.content_keys:
             raise ValueError("Cannot decrypt a Track without any Content Keys...")
 
-        if not binaries.ShakaPackager:
-            raise EnvironmentError("Shaka Packager executable not found but is required.")
+        if config.general.decryptor == "shaka":
+            if not binaries.ShakaPackager:
+                raise EnvironmentError("Shaka Packager executable not found but is required.")
+        elif config.general.decryptor == "mp4decrypt":
+            if not binaries.Mp4Decrypt:
+                raise EnvironmentError("mp4decrypt executable not found but is required.")
         if not path or not path.exists():
             raise ValueError("Tried to decrypt a file that does not exist.")
 
         output_path = path.with_stem(f"{path.stem}_decrypted")
         config.directories.temp.mkdir(parents=True, exist_ok=True)
 
-        try:
-            arguments = [
-                f"input={path},stream=0,output={output_path},output_format=MP4",
-                "--enable_raw_key_decryption",
-                "--keys",
-                ",".join(
-                    [
-                        *[
-                            "label={}:key_id={}:key={}".format(i, kid.hex, key.lower())
-                            for i, (kid, key) in enumerate(self.content_keys.items())
-                        ],
-                        *[
-                            # some services use a blank KID on the file, but real KID for license server
-                            "label={}:key_id={}:key={}".format(i, "00" * 16, key.lower())
-                            for i, (kid, key) in enumerate(self.content_keys.items(), len(self.content_keys))
-                        ],
-                    ]
-                ),
-                "--temp_dir",
-                config.directories.temp,
-            ]
+        if config.general.decryptor == "mp4decrypt":
+            try:
+                key_arg = []
+                for kid, key in self.content_keys.items():
+                    kid_hex = kid.hex if hasattr(kid, "hex") else str(kid).replace("-", "")
+                    key_hex = key if isinstance(key, str) else key.hex()
+                    key_arg.extend(["--key", f"{kid_hex}:{key_hex}"])
 
-            p = subprocess.Popen(
-                [binaries.ShakaPackager, *arguments],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-            )
+                cmd = [
+                    str(binaries.Mp4Decrypt),
+                    *key_arg,
+                    str(path), # Input
+                    str(output_path) # Output
+                ]
 
-            stream_skipped = False
-            had_error = False
+                subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-            shaka_log_buffer = ""
-            for line in iter(p.stderr.readline, ""):
-                line = line.strip()
-                if not line:
-                    continue
-                if "Skip stream" in line:
-                    # file/segment was so small that it didn't have any actual data, ignore
-                    stream_skipped = True
-                if ":INFO:" in line:
-                    continue
-                if ":ERROR:" in line:
-                    had_error = True
-                if "Insufficient bits in bitstream for given AVC profile" in line:
-                    # this is a warning and is something we don't have to worry about
-                    continue
-                shaka_log_buffer += f"{line.strip()}\n"
-
-            if shaka_log_buffer:
-                # wrap to console width - padding - '[Widevine]: '
-                shaka_log_buffer = "\n            ".join(
-                    textwrap.wrap(shaka_log_buffer.rstrip(), width=console.width - 22, initial_indent="")
-                )
-                console.log(Text.from_ansi("\n[Widevine]: " + shaka_log_buffer))
-
-            p.wait()
-
-            if p.returncode != 0 or had_error:
-                raise subprocess.CalledProcessError(p.returncode, arguments)
+            except subprocess.CalledProcessError as e:
+                print(e.returncode)
+                if e.returncode == CTRL_C_SIGNAL:
+                    raise KeyboardInterrupt()
+                else:
+                    error_msg = e.stderr if e.stderr else f"mp4decrypt failed with exit code {e.returncode}"
+                    raise subprocess.CalledProcessError(e.returncode, cmd, output=e.stdout, stderr=error_msg)
+                raise
 
             path.unlink()
-            if not stream_skipped:
-                shutil.move(output_path, path)
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 0xC000013A:  # STATUS_CONTROL_C_EXIT
-                raise KeyboardInterrupt()
-            raise
+            shutil.move(output_path, path)
+        elif config.general.decryptor == "shaka":
+            try:
+                arguments = [
+                    f"input={path},stream=0,output={output_path},output_format=MP4",
+                    "--enable_raw_key_decryption",
+                    "--keys",
+                    ",".join(
+                        [
+                            *[
+                                "label={}:key_id={}:key={}".format(i, kid.hex, key.lower())
+                                for i, (kid, key) in enumerate(self.content_keys.items())
+                            ],
+                            *[
+                                # some services use a blank KID on the file, but real KID for license server
+                                "label={}:key_id={}:key={}".format(i, "00" * 16, key.lower())
+                                for i, (kid, key) in enumerate(self.content_keys.items(), len(self.content_keys))
+                            ],
+                        ]
+                    ),
+                    "--temp_dir",
+                    config.directories.temp,
+                ]
+
+                p = subprocess.Popen(
+                    [binaries.ShakaPackager, *arguments],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                )
+
+                stream_skipped = False
+                had_error = False
+
+                shaka_log_buffer = ""
+                for line in iter(p.stderr.readline, ""):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if "Skip stream" in line:
+                        # file/segment was so small that it didn't have any actual data, ignore
+                        stream_skipped = True
+                    if ":INFO:" in line:
+                        continue
+                    if ":ERROR:" in line:
+                        had_error = True
+                    if "Insufficient bits in bitstream for given AVC profile" in line:
+                        # this is a warning and is something we don't have to worry about
+                        continue
+                    shaka_log_buffer += f"{line.strip()}\n"
+
+                if shaka_log_buffer:
+                    # wrap to console width - padding - '[Widevine]: '
+                    shaka_log_buffer = "\n            ".join(
+                        textwrap.wrap(shaka_log_buffer.rstrip(), width=console.width - 22, initial_indent="")
+                    )
+                    console.log(Text.from_ansi("\n[Widevine]: " + shaka_log_buffer))
+
+                p.wait()
+
+                if p.returncode != 0 or had_error:
+                    raise subprocess.CalledProcessError(p.returncode, arguments)
+
+                path.unlink()
+                if not stream_skipped:
+                    shutil.move(output_path, path)
+            except subprocess.CalledProcessError as e:
+                if e.returncode == CTRL_C_SIGNAL:
+                    raise KeyboardInterrupt()
+                raise
 
     class Exceptions:
         class PSSHNotFound(Exception):

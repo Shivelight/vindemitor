@@ -30,7 +30,7 @@ class General:
         self.tag: str = data.get("tag", "")
         self.chapter_fallback_name: str = data.get("chapter_fallback_name", "Chapter {i:02}")
         self.set_terminal_bg: bool = data.get("set_terminal_bg", True)
-
+        self.decryptor: str = data.get("decryptor", "shaka")
 
 class Network:
     class SessionOptions:
