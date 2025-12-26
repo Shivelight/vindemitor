@@ -217,7 +217,7 @@ class DASH:
                             url=self.url,
                             codec=track_codec,
                             language=track_lang,
-                            is_original_lang=language and is_close_match(track_lang, [language]),
+                            is_original_lang=False if not language else is_close_match(track_lang, [language]),
                             descriptor=Video.Descriptor.DASH,
                             data={
                                 "dash": {
