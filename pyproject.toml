@@ -3,7 +3,7 @@ name = "vindemitor"
 version = "0.1.0"
 description = "Modular Movie, TV, and Music Archival Software."
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.13,<3.14"
 license = "GPL-3.0-only"
 authors = [
   { name = "Shivelight", email = "shivelight@tuta.io" },
